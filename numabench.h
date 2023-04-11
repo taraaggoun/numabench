@@ -35,7 +35,7 @@ struct Results {
 	unsigned int pagecache_node;
 	unsigned int *read_nodes;
 	unsigned int *buffer_nodes;
-	double *times_ms;
+	double *times_us;
 };
 
 struct Buf {

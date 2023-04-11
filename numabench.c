@@ -49,13 +49,13 @@ void allocate_struct_result(struct Config *config, struct Results *results) {
 	double *times_ms = (double *)malloc(iteration_nr * sizeof(double));
 	results->read_nodes = read_nodes;
 	results->buffer_nodes = buffer_nodes;
-	results->times_ms = times_ms;
+	results->times_us = times_ms;
 }
 
 void free_struct_result(struct Results *results) {
 	free(results->read_nodes);
 	free(results->buffer_nodes);
-	free(results->times_ms);
+	free(results->times_us);
 }
 
 void free_buffer(struct Buf *buffer) {
@@ -308,7 +308,7 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 			exit(1);
 		}
 
-		results->times_ms[i] = time;
+		results->times_us[i] = time;
 		results->read_nodes[i] = thread_node;
 		results->buffer_nodes[i] = buffer_node;
 
@@ -390,7 +390,6 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case 'i':
-			printf("%s iterations\n", optarg);
 			config.iteration_nr = atoi(optarg);
 			break;
 
@@ -411,7 +410,7 @@ int main(int argc, char *argv[]) {
 		case '?':
 			break;
 		default:
-			printf("?? getopt returned character code 0%o ??\n", c);
+			fprintf(stderr,"?? getopt returned character code 0%o ??\n", c);
 		}
 	}
 

@@ -44,7 +44,7 @@ void results_to_json(struct Results *results, struct Config *config) {
 
 	uint_array_to_json("read_nodes", results->read_nodes, iterations_nr, false);
 
-	double_array_to_json("times_ms", results->times_ms, iterations_nr, true);
+	double_array_to_json("times_us", results->times_us, iterations_nr, true);
 
 	printf("}");
 }

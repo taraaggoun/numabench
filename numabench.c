@@ -37,16 +37,16 @@ struct Buf *do_buffer(size_t size) {
 }
 
 void allocate_struct_result(struct Config *config, struct Results *results) {
-	int iteration_nr = config->iteration_nr;
+	int len = results->iteration_nr;
 	results->read_node = config->placement.thread;
 	results->buffer_node = config->placement.buffer;
 	results->pagecache_node = config->placement.pagecache;
 
 	unsigned int *read_nodes =
-		(unsigned int *)malloc(iteration_nr * sizeof(unsigned int));
+		(unsigned int *)malloc(len * sizeof(unsigned int));
 	unsigned int *buffer_nodes =
-		(unsigned int *)malloc(iteration_nr * sizeof(unsigned int));
-	double *times_ms = (double *)malloc(iteration_nr * sizeof(double));
+		(unsigned int *)malloc(len * sizeof(unsigned int));
+	double *times_ms = (double *)malloc(len * sizeof(double));
 	results->read_nodes = read_nodes;
 	results->buffer_nodes = buffer_nodes;
 	results->times_us = times_ms;
@@ -69,9 +69,12 @@ struct Buf *do_buffer_node(int node, size_t size) {
 }
 
 inline static void print_help(int err_code) {
-	printf("pagecache [-m] migration [-s] layout [-i] iterations [-h]\n");
+	printf("pagecache [-m migration] [-i iterations] [-t nid] [-p nid] [-b "
+	       "nid] [-h]\n");
 	printf("\t--allow-migration -m [pages|thread]\n");
-	printf("\t--start -s [LL|LD|DL|DD]\n");
+	printf("\t--thread nid\n");
+	printf("\t--buffer nid\n");
+	printf("\t--pagecache nid\n");
 	printf("\t--iterations -i iterations\n");
 	exit(err_code);
 }
@@ -172,7 +175,7 @@ int regenerate_pagecache(const struct Config *config) {
 
 	setaffinity_node(config->placement.pagecache);
 
-	struct Buf *read_buffer = do_buffer(sizeof(char) * 2 * PAGE_SIZE);
+	struct Buf *read_buffer = do_buffer(sizeof(char) * READSIZE);
 	if (read_buffer == NULL) {
 		perror("mmap");
 		exit(1);
@@ -199,8 +202,9 @@ double diff_timespec_us(const struct timespec *time1,
 	       (time1->tv_nsec - time0->tv_nsec) / 1e3;
 }
 
-double read_file(const char *file_name, struct Buf *buffer) {
-	size_t readChunkSize = 2 * PAGE_SIZE;
+double read_file(const char *file_name, struct Buf *buffer,
+                 struct Results *results) {
+	size_t readChunkSize = READSIZE;
 	size_t filesize = file_size(file_name);
 	struct stat st;
 
@@ -274,6 +278,25 @@ unsigned int buffer_node_maxpage(char *ptr, size_t len) {
 	return maxnid;
 }
 
+void compute_results(int i, double time, struct Buf *buffer,
+                     struct Results *results) {
+	unsigned int thread_node;
+	unsigned int buffer_node = buffer_node_maxpage(buffer->data, buffer->size);
+	int status;
+	status = syscall(SYS_getcpu, NULL, &thread_node, NULL);
+	if (status < 0) {
+		perror("getcpu");
+		exit(1);
+	}
+
+	results->times_us[i] = time;
+	results->read_nodes[i] = thread_node;
+	results->buffer_nodes[i] = buffer_node;
+
+	fprintf(stderr, "(%u,%u,%u): %f\n", results->pagecache_node, thread_node,
+	        buffer_node, time);
+}
+
 void do_benchmark(const struct Config *config, struct Results *results) {
 
 	setaffinity_node(config->placement.thread);
@@ -297,23 +320,8 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 	}
 
 	for (int i = 0; i < config->iteration_nr; i++) {
-		double time = read_file(config->file_name, buffer);
-		unsigned int thread_node;
-		unsigned int buffer_node =
-			buffer_node_maxpage(buffer->data, buffer->size);
-		int status;
-		status = syscall(SYS_getcpu, NULL, &thread_node, NULL);
-		if (status < 0) {
-			perror("getcpu");
-			exit(1);
-		}
-
-		results->times_us[i] = time;
-		results->read_nodes[i] = thread_node;
-		results->buffer_nodes[i] = buffer_node;
-
-		fprintf(stderr, "(%d,%d,%d) %f\n", config->placement.pagecache,
-		        thread_node, buffer_node, time);
+		double time = read_file(config->file_name, buffer, results);
+		compute_results(i, time, buffer, results);
 	}
 
 	free_buffer(buffer);
@@ -349,7 +357,6 @@ int main(int argc, char *argv[]) {
 			{"thread", required_argument, 0, 't'},
 			{"buffer", required_argument, 0, 'b'},
 			{"pagecache", required_argument, 0, 'p'},
-			{"start", required_argument, 0, 's'},
 			{"iterations", required_argument, 0, 'i'},
 			{"file", required_argument, 0, 'f'},
 			{"help", no_argument, 0, 'h'},
@@ -410,15 +417,15 @@ int main(int argc, char *argv[]) {
 		case '?':
 			break;
 		default:
-			fprintf(stderr,"?? getopt returned character code 0%o ??\n", c);
+			fprintf(stderr, "?? getopt returned character code 0%o ??\n", c);
 		}
 	}
 
-	int iteration_nr = config.iteration_nr;
 	struct Results results = {
 		.read_node = config.placement.thread,
 		.buffer_node = config.placement.buffer,
 		.pagecache_node = config.placement.pagecache,
+		.iteration_nr = config.iteration_nr,
 	};
 	allocate_struct_result(&config, &results);
 	print_recap(&config);

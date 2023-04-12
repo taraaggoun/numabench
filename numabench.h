@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define PAGE_SIZE 0x1000
+#define PAGE_SIZE (size_t)0x1000
+#define READSIZE 2 * (PAGE_SIZE)
 #define MAX_NODES_POSSIBLE 9
 #define ARRAY_SIZE MAX_NODES_POSSIBLE
 #define ALIGN_TO_PAGE(x)                                                       \
@@ -44,32 +45,21 @@ struct Buf {
 };
 
 size_t file_size(const char *test_file_name);
-
 struct Buf *do_buffer(size_t size);
 struct Buf *do_buffer_node(int node, size_t size);
 inline static void print_help(int err_code);
 static char *layout_to_string(enum Layout layout);
-
 enum Layout placement_to_layout(const struct Placement *placement);
 size_t min(size_t a, size_t b);
-
+unsigned int buffer_node_maxpage(char *ptr, size_t len);
 void print_placement(const struct Placement *placement);
-
 void print_recap(const struct Config *config);
-
-// write all the dirty pages from the pagecache
 static void sync_caches();
-
 void drop_caches();
-
 void setaffinity_node(unsigned int node);
-
 void setaffinity_any();
-
 unsigned int get_num_nodes();
-
 int regenerate_pagecache(const struct Config *config);
-
 void do_benchmark(const struct Config *config, struct Results *results);
 
 #endif

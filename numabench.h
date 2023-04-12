@@ -47,14 +47,11 @@ struct Buf {
 size_t file_size(const char *test_file_name);
 struct Buf *do_buffer(size_t size);
 struct Buf *do_buffer_node(int node, size_t size);
-inline static void print_help(int err_code);
-static char *layout_to_string(enum Layout layout);
 enum Layout placement_to_layout(const struct Placement *placement);
 size_t min(size_t a, size_t b);
 unsigned int buffer_node_maxpage(char *ptr, size_t len);
 void print_placement(const struct Placement *placement);
 void print_recap(const struct Config *config);
-static void sync_caches();
 void drop_caches();
 void setaffinity_node(unsigned int node);
 void setaffinity_any();

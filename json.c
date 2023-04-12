@@ -6,7 +6,7 @@ void uint_array_to_json(char *string, unsigned int *array, unsigned int length,
                         bool ending) {
 	printf("\"%s\":", string);
 	printf("[");
-	for (int i = 0; i < length - 1; i++) {
+	for (unsigned int i = 0; i < length - 1; i++) {
 		printf("%u", array[i]);
 		printf(",");
 	}
@@ -21,7 +21,7 @@ void double_array_to_json(char *string, double *array, unsigned int length,
                           bool ending) {
 	printf("\"%s\":", string);
 	printf("[");
-	for (int i = 0; i < length - 1; i++) {
+	for (unsigned int i = 0; i < length - 1; i++) {
 		printf("%f", array[i]);
 		printf(",");
 	}

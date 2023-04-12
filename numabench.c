@@ -29,7 +29,7 @@ struct Buf *do_buffer(size_t size) {
 	struct Buf *buffer = (struct Buf *)mmap(NULL, size + sizeof(struct Buf),
 	                                        PROT_READ | PROT_WRITE,
 	                                        MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-	for (int i = 0; i < size; i += PAGE_SIZE) {
+	for (unsigned int i = 0; i < size; i += PAGE_SIZE) {
 		buffer->data[i] = 0;
 	}
 	buffer->size = size;
@@ -89,6 +89,9 @@ static char *layout_to_string(enum Layout layout) {
 		return "DL";
 	case (DD):
 		return "DD";
+	default:
+		fprintf(stderr, "switch layout not found\n");
+		exit(1);
 	}
 }
 
@@ -202,8 +205,7 @@ double diff_timespec_us(const struct timespec *time1,
 	       (time1->tv_nsec - time0->tv_nsec) / 1e3;
 }
 
-double read_file(const char *file_name, struct Buf *buffer,
-                 struct Results *results) {
+double read_file(const char *file_name, struct Buf *buffer) {
 	size_t readChunkSize = READSIZE;
 	size_t filesize = file_size(file_name);
 	struct stat st;
@@ -213,7 +215,7 @@ double read_file(const char *file_name, struct Buf *buffer,
 		exit(1);
 	}
 
-	if (!buffer || buffer->size != st.st_size)
+	if (!buffer || buffer->size != (size_t)st.st_size)
 		fprintf(stderr, "incorrect buffer size");
 
 	if (filesize < readChunkSize)
@@ -242,7 +244,7 @@ double read_file(const char *file_name, struct Buf *buffer,
 			perror("lseek");
 		}
 	} while (sz > 0);
-	if (total != st.st_size) {
+	if (total != (size_t)st.st_size) {
 		fprintf(stderr, "read random erreur %zd %zd %zd\n", total, st.st_size,
 		        buffer->size);
 		exit(1);
@@ -320,7 +322,7 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 	}
 
 	for (int i = 0; i < config->iteration_nr; i++) {
-		double time = read_file(config->file_name, buffer, results);
+		double time = read_file(config->file_name, buffer);
 		compute_results(i, time, buffer, results);
 	}
 
@@ -350,7 +352,6 @@ int main(int argc, char *argv[]) {
 
 	int c;
 	while (1) {
-		int this_option_optind = optind ? optind : 1;
 		int option_index = 0;
 		static struct option long_options[] = {
 			{"allow-migration", required_argument, 0, 'm'},

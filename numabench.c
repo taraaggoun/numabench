@@ -18,7 +18,7 @@
 
 size_t file_size(const char *test_file_name) {
 	struct stat st;
-	if (stat(test_file_name, &st) != 0) {
+	if (stat(test_file_name, &st) != 0 || st.st_size < 0) {
 		perror("stat");
 		exit(1);
 	}
@@ -208,14 +208,8 @@ double diff_timespec_us(const struct timespec *time1,
 double read_file(const char *file_name, struct Buf *buffer) {
 	size_t readChunkSize = READSIZE;
 	size_t filesize = file_size(file_name);
-	struct stat st;
 
-	if (stat(file_name, &st) != 0) {
-		perror("stat");
-		exit(1);
-	}
-
-	if (!buffer || buffer->size != (size_t)st.st_size)
+	if (!buffer || buffer->size != filesize)
 		fprintf(stderr, "incorrect buffer size");
 
 	if (filesize < readChunkSize)
@@ -244,8 +238,8 @@ double read_file(const char *file_name, struct Buf *buffer) {
 			perror("lseek");
 		}
 	} while (sz > 0);
-	if (total != (size_t)st.st_size) {
-		fprintf(stderr, "read random erreur %zd %zd %zd\n", total, st.st_size,
+	if (total != filesize) {
+		fprintf(stderr, "read random erreur %zd %zd %zd\n", total, filesize,
 		        buffer->size);
 		exit(1);
 	}

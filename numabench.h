@@ -13,6 +13,7 @@
 	          (unsigned long)PAGE_SIZE))
 
 enum Layout { LL, DL, LD, DD };
+enum Operation { Read, Write };
 
 struct Placement {
 	unsigned int pagecache;
@@ -23,6 +24,7 @@ struct Placement {
 struct Config {
 	struct Placement placement;
 	int iteration_nr;
+	enum Operation operation;
 	bool thread_migration;
 	bool pages_migration;
 	enum Layout layout;

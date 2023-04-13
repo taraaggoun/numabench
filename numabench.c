@@ -69,8 +69,10 @@ struct Buf *do_buffer_node(int node, size_t size) {
 }
 
 inline static void print_help(int err_code) {
-	printf("pagecache [-m migration] [-i iterations] [-t nid] [-p nid] [-b "
+	printf("pagecache [-o operation] [-m migration] [-i iterations] [-t nid] "
+	       "[-p nid] [-b "
 	       "nid] [-h]\n");
+	printf("\t--mode -o [read|write]\n");
 	printf("\t--allow-migration -m [pages|thread]\n");
 	printf("\t--thread nid\n");
 	printf("\t--buffer nid\n");
@@ -108,13 +110,25 @@ enum Layout placement_to_layout(const struct Placement *placement) {
 	}
 }
 
+char *operation_to_string(const enum Operation operation) {
+	switch (operation) {
+	case Read:
+		return "read";
+	case Write:
+		return "write";
+	}
+	return NULL;
+}
+
 void print_placement(const struct Placement *placement) {
 	const struct Placement *p = placement;
 	fprintf(stderr, "(%d,%d,%d)\n", p->pagecache, p->thread, p->buffer);
 }
 
 void print_recap(const struct Config *config) {
-	fprintf(stderr, "file to read:        %s\n", config->file_name);
+	fprintf(stderr, "operation is %s\n",
+	        operation_to_string(config->operation));
+	fprintf(stderr, "file :               %s\n", config->file_name);
 	fprintf(stderr, "page  migration:     %s\n",
 	        config->pages_migration ? "allowed" : "not allowed");
 	fprintf(stderr, "thread migration:    %s\n",
@@ -205,7 +219,8 @@ double diff_timespec_us(const struct timespec *time1,
 	       (time1->tv_nsec - time0->tv_nsec) / 1e3;
 }
 
-double read_file(const char *file_name, struct Buf *buffer) {
+double file_operation(const char *file_name, struct Buf *buffer,
+                      enum Operation op) {
 	size_t readChunkSize = READSIZE;
 	size_t filesize = file_size(file_name);
 
@@ -226,17 +241,29 @@ double read_file(const char *file_name, struct Buf *buffer) {
 	struct timespec start, end;
 
 	do {
-		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-		sz = read(fd, buffer->data + total,
-		          min(readChunkSize, filesize - total));
-		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+		const long offset = ((random() << 32) | random()) % (filesize - 1);
+
+		switch (op) {
+		case Read:
+			if (lseek(fd, offset, SEEK_SET) == -1) {
+				perror("lseek");
+			}
+
+			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+			sz = read(fd, buffer->data + total,
+			          min(readChunkSize, filesize - total));
+			clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+			break;
+		case Write:
+			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+			sz = write(fd, buffer->data + offset,
+			           min(readChunkSize, filesize - total));
+			clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+			break;
+		}
 		total_time += diff_timespec_us(&end, &start);
 		total += sz;
 
-		const long offset = random() % filesize;
-		if (lseek(fd, offset, SEEK_SET) == -1) {
-			perror("lseek");
-		}
 	} while (sz > 0);
 	if (total != filesize) {
 		fprintf(stderr, "read random erreur %zd %zd %zd\n", total, filesize,
@@ -245,6 +272,14 @@ double read_file(const char *file_name, struct Buf *buffer) {
 	}
 	close(fd);
 	return total_time;
+}
+
+double read_file(const char *file_name, struct Buf *buffer) {
+	return file_operation(file_name, buffer, Read);
+}
+
+double write_file(const char *file_name, struct Buf *buffer) {
+	return file_operation(file_name, buffer, Write);
 }
 
 unsigned int buffer_node_maxpage(char *ptr, size_t len) {
@@ -305,7 +340,8 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 	if (!config->pages_migration) {
 		unsigned long nodemask = 1ul << config->placement.buffer;
 		if (mbind(ALIGN_TO_PAGE(buffer->data), buffer->size, MPOL_BIND,
-		          &nodemask, sizeof(unsigned long), MPOL_MF_STRICT | MPOL_MF_MOVE) < 0) {
+		          &nodemask, sizeof(unsigned long),
+		          MPOL_MF_STRICT | MPOL_MF_MOVE) < 0) {
 			perror("mbind");
 			exit(1);
 		}
@@ -316,7 +352,8 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 	}
 
 	for (int i = 0; i < config->iteration_nr; i++) {
-		double time = read_file(config->file_name, buffer);
+		double time =
+			file_operation(config->file_name, buffer, config->operation);
 		compute_results(i, time, buffer, results);
 	}
 
@@ -339,6 +376,7 @@ int main(int argc, char *argv[]) {
 				.pagecache = 0,
 			},
 		.file_name = "testfile",
+		.operation = Read,
 		.iteration_nr = 20,
 		.pages_migration = false,
 		.thread_migration = false,
@@ -351,13 +389,14 @@ int main(int argc, char *argv[]) {
 			{"allow-migration", required_argument, 0, 'm'},
 			{"thread", required_argument, 0, 't'},
 			{"buffer", required_argument, 0, 'b'},
+			{"mode", required_argument, 0, 'o'},
 			{"pagecache", required_argument, 0, 'p'},
 			{"iterations", required_argument, 0, 'i'},
 			{"file", required_argument, 0, 'f'},
 			{"help", no_argument, 0, 'h'},
 			{0, 0, 0, 0}};
 
-		c = getopt_long(argc, argv, "hm:s:i:f:t:b:p:", long_options,
+		c = getopt_long(argc, argv, "hm:s:i:o:f:t:b:p:", long_options,
 		                &option_index);
 		if (c == -1)
 			break;
@@ -403,6 +442,16 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'p':
 			config.placement.pagecache = atoi(optarg);
+			break;
+		case 'o':
+			if (strcmp(optarg, "read") == 0)
+				config.operation = Read;
+			else if (strcmp(optarg, "write") == 0)
+				config.operation = Write;
+			else {
+				fprintf(stderr, "operation %s is not supported\n", optarg);
+				print_help(1);
+			}
 			break;
 		case 'f':
 			config.file_name = optarg;

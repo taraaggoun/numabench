@@ -2,7 +2,7 @@ SRC = json.c numabench.c
 OBJ = $(SRC:.c=.o)
 LDFLAGS = -lnuma
 
-all: numabench
+all: numabench testfile
 
 .c.o:
 	${CC} -Wall -Wextra -c ${CFLAGS} $<

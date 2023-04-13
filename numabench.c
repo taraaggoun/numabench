@@ -305,7 +305,7 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 	if (!config->pages_migration) {
 		unsigned long nodemask = 1ul << config->placement.buffer;
 		if (mbind(ALIGN_TO_PAGE(buffer->data), buffer->size, MPOL_BIND,
-		          &nodemask, sizeof(unsigned long), MPOL_MF_STRICT) < 0) {
+		          &nodemask, sizeof(unsigned long), MPOL_MF_STRICT | MPOL_MF_MOVE) < 0) {
 			perror("mbind");
 			exit(1);
 		}

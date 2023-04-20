@@ -6,7 +6,7 @@
 
 #define PAGE_SIZE (size_t)0x1000
 #define READSIZE 2 * (PAGE_SIZE)
-#define MAX_NODES_POSSIBLE 9
+#define MAX_NODES_POSSIBLE 16
 #define ARRAY_SIZE MAX_NODES_POSSIBLE
 #define ALIGN_TO_PAGE(x)                                                       \
 	((void *)((((unsigned long)(x)) / (unsigned long)PAGE_SIZE) *              \

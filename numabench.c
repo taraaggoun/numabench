@@ -42,14 +42,12 @@ void allocate_struct_result(struct Config *config, struct Results *results) {
 	results->buffer_node = config->placement.buffer;
 	results->pagecache_node = config->placement.pagecache;
 
-	unsigned int *read_nodes =
-		(unsigned int *)malloc(len * sizeof(unsigned int));
-	unsigned int *buffer_nodes =
-		(unsigned int *)malloc(len * sizeof(unsigned int));
-	double *times_ms = (double *)malloc(len * sizeof(double));
-	results->read_nodes = read_nodes;
-	results->buffer_nodes = buffer_nodes;
-	results->times_us = times_ms;
+	results->read_nodes = (unsigned int *)malloc(len * sizeof(unsigned int));
+	results->buffer_nodes =
+		(unsigned int *)malloc(len * sizeof(unsigned int) * get_num_nodes());
+	memset(results->buffer_nodes, 0,
+	       len * sizeof(unsigned int) * get_num_nodes());
+	results->times_us = (double *)malloc(len * sizeof(double));
 }
 
 void free_struct_result(struct Results *results) {
@@ -122,7 +120,7 @@ char *operation_to_string(const enum Operation operation) {
 
 void print_placement(const struct Placement *placement) {
 	const struct Placement *p = placement;
-	fprintf(stderr, "(%d,%d,%d)\n", p->pagecache, p->thread, p->buffer);
+	fprintf(stderr, "(%d,%d,%d)\n", p->thread, p->pagecache, p->buffer);
 }
 
 void print_recap(const struct Config *config) {
@@ -282,9 +280,7 @@ double write_file(const char *file_name, struct Buf *buffer) {
 	return file_operation(file_name, buffer, Write);
 }
 
-unsigned int buffer_node_maxpage(char *ptr, size_t len) {
-	const unsigned int num_nodes = (int)get_num_nodes();
-	unsigned int nodes[ARRAY_SIZE] = {0};
+void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node) {
 
 	for (char *addr = ptr; addr < ptr + len; addr += PAGE_SIZE) {
 		int node = 0;
@@ -295,8 +291,14 @@ unsigned int buffer_node_maxpage(char *ptr, size_t len) {
 		if (ret < 0)
 			fprintf(stderr, "get_mempolicy failed");
 
-		nodes[node]++;
+		pages_per_node[node]++;
 	}
+}
+
+unsigned int buffer_node_maxpage(char *ptr, size_t len) {
+	const unsigned int num_nodes = (int)get_num_nodes();
+	unsigned int nodes[ARRAY_SIZE] = {0};
+	buffer_node_pages(ptr, len, nodes);
 
 	unsigned int maxnid = 0;
 	unsigned int maxnodes = 0;
@@ -322,9 +324,10 @@ void compute_results(int i, double time, struct Buf *buffer,
 
 	results->times_us[i] = time;
 	results->read_nodes[i] = thread_node;
-	results->buffer_nodes[i] = buffer_node;
+	buffer_node_pages(buffer->data, buffer->size,
+	                  &results->buffer_nodes[get_num_nodes() * i]);
 
-	fprintf(stderr, "(%u,%u,%u): %f\n", results->pagecache_node, thread_node,
+	fprintf(stderr, "(%u,%u,%u): %f\n", thread_node, results->pagecache_node,
 	        buffer_node, time);
 }
 

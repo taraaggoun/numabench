@@ -59,6 +59,6 @@ void setaffinity_node(unsigned int node);
 void setaffinity_any();
 unsigned int get_num_nodes();
 int regenerate_pagecache(const struct Config *config);
-void do_benchmark(const struct Config *config, struct Results *results);
+void do_benchmark(const struct Config *config);
 
 #endif

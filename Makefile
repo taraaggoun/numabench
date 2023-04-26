@@ -1,4 +1,4 @@
-SRC = json.c numabench.c
+SRC = json.c numabench.c module.c
 OBJ = $(SRC:.c=.o)
 LDFLAGS = -lnuma
 

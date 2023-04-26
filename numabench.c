@@ -1,5 +1,6 @@
 #include "numabench.h"
 #include "json.h"
+#include "module.h"
 #include <fcntl.h>
 #include <getopt.h>
 #include <numa.h>
@@ -331,7 +332,7 @@ void compute_results(int i, double time, struct Buf *buffer,
 	        buffer_node, time);
 }
 
-void do_benchmark(const struct Config *config, struct Results *results) {
+void do_benchmark(const struct Config *config) {
 
 	setaffinity_node(config->placement.thread);
 	regenerate_pagecache(config);
@@ -350,15 +351,21 @@ void do_benchmark(const struct Config *config, struct Results *results) {
 		}
 	}
 
+	config_module(buffer->data, config->placement.pagecache, getpid(),
+	              buffer->size);
+	start_module();
+
 	if (config->thread_migration) {
 		setaffinity_any();
 	}
 
 	for (int i = 0; i < config->iteration_nr; i++) {
-		double time =
-			file_operation(config->file_name, buffer, config->operation);
-		compute_results(i, time, buffer, results);
+		file_operation(config->file_name, buffer, config->operation);
+		force_log_module();
+		// compute_results(i, time, buffer, results);
 	}
+
+	pause_module();
 
 	free_buffer(buffer);
 }
@@ -468,15 +475,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	struct Results results = {
-		.read_node = config.placement.thread,
-		.buffer_node = config.placement.buffer,
-		.pagecache_node = config.placement.pagecache,
-		.iteration_nr = config.iteration_nr,
-	};
-	allocate_struct_result(&config, &results);
 	print_recap(&config);
-	do_benchmark(&config, &results);
-	results_to_json(&results, &config);
-	free_struct_result(&results);
+	do_benchmark(&config);
 }

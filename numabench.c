@@ -69,12 +69,13 @@ struct Buf *do_buffer_node(int node, size_t size) {
 
 inline static void print_help(int err_code) {
 	printf("pagecache [-o operation] [-m migration] [-i iterations] [-t nid] "
-	       "[-p nid] [-b "
-	       "nid] [-h]\n");
+	       "[-p nid] [-b nid] [ -r | -n ] [-h]\n");
 	printf("\t--mode -o [read|write]\n");
 	printf("\t--allow-migration -m [pages|thread]\n");
 	printf("\t--thread nid\n");
 	printf("\t--buffer nid\n");
+	printf("\t--random -r\n");
+	printf("\t--norandom -n\n");
 	printf("\t--pagecache nid\n");
 	printf("\t--iterations -i iterations\n");
 	exit(err_code);
@@ -125,16 +126,17 @@ void print_placement(const struct Placement *placement) {
 }
 
 void print_recap(const struct Config *config) {
-	fprintf(stderr, "operation is %s\n",
+	fprintf(stderr, "operation is:        %s %s\n",
+	        config->random_operation ? "random" : "sequential",
 	        operation_to_string(config->operation));
-	fprintf(stderr, "file :               %s\n", config->file_name);
+	fprintf(stderr, "file:                %s\n", config->file_name);
 	fprintf(stderr, "page  migration:     %s\n",
 	        config->pages_migration ? "allowed" : "not allowed");
 	fprintf(stderr, "thread migration:    %s\n",
 	        config->thread_migration ? "allowed" : "not allowed");
 	fprintf(stderr, "starting in layout:  %s\n",
 	        layout_to_string(placement_to_layout(&config->placement)));
-	fprintf(stderr, "placement is :       ");
+	fprintf(stderr, "placement is:        ");
 	print_placement(&config->placement);
 	fprintf(stderr, "\n");
 }
@@ -219,7 +221,7 @@ double diff_timespec_us(const struct timespec *time1,
 }
 
 double file_operation(const char *file_name, struct Buf *buffer,
-                      enum Operation op) {
+                      enum Operation op, const bool random_op) {
 	size_t readChunkSize = READSIZE;
 	size_t filesize = file_size(file_name);
 
@@ -240,13 +242,16 @@ double file_operation(const char *file_name, struct Buf *buffer,
 	struct timespec start, end;
 
 	do {
-		const long offset = ((random() << 32) | random()) % (filesize - 1);
+		long offset;
+		if (random_op)
+			offset = ((random() << 32) | random()) % (filesize - 1);
 
 		switch (op) {
 		case Read:
-			if (lseek(fd, offset, SEEK_SET) == -1) {
-				perror("lseek");
-			}
+			if (random_op)
+				if (lseek(fd, offset, SEEK_SET) == -1) {
+					perror("lseek");
+				}
 
 			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 			sz = read(fd, buffer->data + total,
@@ -273,12 +278,14 @@ double file_operation(const char *file_name, struct Buf *buffer,
 	return total_time;
 }
 
-double read_file(const char *file_name, struct Buf *buffer) {
-	return file_operation(file_name, buffer, Read);
+double read_file(const char *file_name, struct Buf *buffer,
+                 const bool random_op) {
+	return file_operation(file_name, buffer, Read, random_op);
 }
 
-double write_file(const char *file_name, struct Buf *buffer) {
-	return file_operation(file_name, buffer, Write);
+double write_file(const char *file_name, struct Buf *buffer,
+                  const bool random_op) {
+	return file_operation(file_name, buffer, Write, random_op);
 }
 
 void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node) {
@@ -360,7 +367,8 @@ void do_benchmark(const struct Config *config) {
 	}
 
 	for (int i = 0; i < config->iteration_nr; i++) {
-		file_operation(config->file_name, buffer, config->operation);
+		file_operation(config->file_name, buffer, config->operation,
+		               config->random_operation);
 		force_log_module();
 		// compute_results(i, time, buffer, results);
 	}
@@ -390,6 +398,7 @@ int main(int argc, char *argv[]) {
 		.iteration_nr = 20,
 		.pages_migration = false,
 		.thread_migration = false,
+		.random_operation = true,
 	};
 
 	int c;
@@ -403,10 +412,12 @@ int main(int argc, char *argv[]) {
 			{"pagecache", required_argument, 0, 'p'},
 			{"iterations", required_argument, 0, 'i'},
 			{"file", required_argument, 0, 'f'},
+			{"random", no_argument, 0, 'r'},
+			{"norandom", no_argument, 0, 'n'},
 			{"help", no_argument, 0, 'h'},
 			{0, 0, 0, 0}};
 
-		c = getopt_long(argc, argv, "hm:s:i:o:f:t:b:p:", long_options,
+		c = getopt_long(argc, argv, "rnhm:s:i:o:f:t:b:p:", long_options,
 		                &option_index);
 		if (c == -1)
 			break;
@@ -423,7 +434,12 @@ int main(int argc, char *argv[]) {
 				print_help(1);
 			}
 			break;
-
+		case 'r':
+			config.random_operation = true;
+			break;
+		case 'n':
+			config.random_operation = false;
+			break;
 		case 's':
 			if (strcmp(optarg, "LL") == 0 || strcmp(optarg, "ll") == 0) {
 				config.layout = LL;

@@ -27,6 +27,7 @@ struct Config {
 	enum Operation operation;
 	bool thread_migration;
 	bool pages_migration;
+	bool random_operation;
 	enum Layout layout;
 	char *file_name;
 };

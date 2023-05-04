@@ -379,13 +379,6 @@ void do_benchmark(const struct Config *config) {
 }
 
 int main(int argc, char *argv[]) {
-	if (numa_available() != 0) {
-		perror("numa_available");
-		exit(1);
-	}
-
-	srandom(time(NULL));
-
 	struct Config config = {
 		.placement =
 			{
@@ -489,6 +482,11 @@ int main(int argc, char *argv[]) {
 		default:
 			fprintf(stderr, "?? getopt returned character code 0%o ??\n", c);
 		}
+	}
+
+	if (numa_available() != 0) {
+		perror("numa_available");
+		exit(1);
 	}
 
 	print_recap(&config);

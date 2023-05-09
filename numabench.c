@@ -67,7 +67,7 @@ struct Buf *do_buffer_node(int node, size_t size) {
 	return do_buffer(size);
 }
 
-inline static void print_help(int err_code) {
+inline static void print_help() {
 	printf("pagecache [-o operation] [-m migration] [-i iterations] [-t nid] "
 	       "[-p nid] [-b nid] [ -r | -n ] [-h]\n");
 	printf("\t--mode -o [read|write]\n");
@@ -75,10 +75,9 @@ inline static void print_help(int err_code) {
 	printf("\t--thread nid\n");
 	printf("\t--buffer nid\n");
 	printf("\t--random -r\n");
-	printf("\t--norandom -n\n");
+	printf("\t--sequential -s\n");
 	printf("\t--pagecache nid\n");
 	printf("\t--iterations -i iterations\n");
-	exit(err_code);
 }
 
 static char *layout_to_string(enum Layout layout) {
@@ -378,6 +377,95 @@ void do_benchmark(const struct Config *config) {
 	free_buffer(buffer);
 }
 
+static void parse_args(int argc, char *argv[], struct Config *config) {
+	int c;
+	bool sequential_set = false;
+	bool random_set = false;
+	while (1) {
+		int option_index = 0;
+		static struct option long_options[] = {
+			{"allow-migration", required_argument, 0, 'm'},
+			{"thread", required_argument, 0, 't'},
+			{"buffer", required_argument, 0, 'b'},
+			{"mode", required_argument, 0, 'o'},
+			{"pagecache", required_argument, 0, 'p'},
+			{"iterations", required_argument, 0, 'i'},
+			{"file", required_argument, 0, 'f'},
+			{"random", no_argument, 0, 'r'},
+			{"sequential", no_argument, 0, 's'},
+			{"help", no_argument, 0, 'h'},
+			{0, 0, 0, 0}};
+
+		c = getopt_long(argc, argv, "rsnhm:i:o:f:t:b:p:", long_options,
+		                &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'm':
+			if (strcmp(optarg, "thread") == 0) {
+				config->thread_migration = true;
+			} else if (strcmp(optarg, "pages") == 0) {
+				config->pages_migration = true;
+			} else {
+				fprintf(stderr, "error: --allow-migration %s not recognized\n",
+				        optarg);
+				print_help();
+				exit(1);
+			}
+			break;
+		case 'r':
+			random_set = true;
+			config->random_operation = true;
+			break;
+		case 's':
+			sequential_set = true;
+			config->random_operation = false;
+			break;
+		case 'i':
+			config->iteration_nr = atoi(optarg);
+			break;
+
+		case 't':
+			config->placement.thread = atoi(optarg);
+			break;
+		case 'b':
+			config->placement.buffer = atoi(optarg);
+			break;
+		case 'p':
+			config->placement.pagecache = atoi(optarg);
+			break;
+		case 'o':
+			if (strcmp(optarg, "read") == 0)
+				config->operation = Read;
+			else if (strcmp(optarg, "write") == 0)
+				config->operation = Write;
+			else {
+				fprintf(stderr, "operation %s is not supported\n", optarg);
+				print_help();
+				exit(1);
+			}
+			break;
+		case 'f':
+			config->file_name = optarg;
+			break;
+		case 'h':
+			print_help();
+			exit(0);
+		case '?':
+			break;
+		default:
+			fprintf(stderr, "?? getopt returned character code 0%o ??\n", c);
+		}
+	}
+
+	if (random_set && sequential_set) {
+		print_help();
+		fprintf(stderr, "--sequential and --random are mutually exclusive\n");
+		exit(1);
+	}
+}
+
 int main(int argc, char *argv[]) {
 	struct Config config = {
 		.placement =
@@ -394,98 +482,11 @@ int main(int argc, char *argv[]) {
 		.random_operation = true,
 	};
 
-	int c;
-	while (1) {
-		int option_index = 0;
-		static struct option long_options[] = {
-			{"allow-migration", required_argument, 0, 'm'},
-			{"thread", required_argument, 0, 't'},
-			{"buffer", required_argument, 0, 'b'},
-			{"mode", required_argument, 0, 'o'},
-			{"pagecache", required_argument, 0, 'p'},
-			{"iterations", required_argument, 0, 'i'},
-			{"file", required_argument, 0, 'f'},
-			{"random", no_argument, 0, 'r'},
-			{"norandom", no_argument, 0, 'n'},
-			{"help", no_argument, 0, 'h'},
-			{0, 0, 0, 0}};
-
-		c = getopt_long(argc, argv, "rnhm:s:i:o:f:t:b:p:", long_options,
-		                &option_index);
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'm':
-			if (strcmp(optarg, "thread") == 0) {
-				config.thread_migration = true;
-			} else if (strcmp(optarg, "pages") == 0) {
-				config.pages_migration = true;
-			} else {
-				fprintf(stderr, "error: --allow-migration %s not recognized\n",
-				        optarg);
-				print_help(1);
-			}
-			break;
-		case 'r':
-			config.random_operation = true;
-			break;
-		case 'n':
-			config.random_operation = false;
-			break;
-		case 's':
-			if (strcmp(optarg, "LL") == 0 || strcmp(optarg, "ll") == 0) {
-				config.layout = LL;
-			} else if (strcmp(optarg, "LD") == 0 || strcmp(optarg, "ld") == 0) {
-				config.layout = LD;
-			} else if (strcmp(optarg, "DL") == 0 || strcmp(optarg, "dl") == 0) {
-				config.layout = DL;
-			} else if (strcmp(optarg, "DD") == 0 || strcmp(optarg, "dd") == 0) {
-				config.layout = DD;
-			} else {
-				printf("error: --start %s not recognized\n", optarg);
-				print_help(1);
-			}
-
-			break;
-
-		case 'i':
-			config.iteration_nr = atoi(optarg);
-			break;
-
-		case 't':
-			config.placement.thread = atoi(optarg);
-			break;
-		case 'b':
-			config.placement.buffer = atoi(optarg);
-			break;
-		case 'p':
-			config.placement.pagecache = atoi(optarg);
-			break;
-		case 'o':
-			if (strcmp(optarg, "read") == 0)
-				config.operation = Read;
-			else if (strcmp(optarg, "write") == 0)
-				config.operation = Write;
-			else {
-				fprintf(stderr, "operation %s is not supported\n", optarg);
-				print_help(1);
-			}
-			break;
-		case 'f':
-			config.file_name = optarg;
-			break;
-		case 'h':
-			print_help(0);
-		case '?':
-			break;
-		default:
-			fprintf(stderr, "?? getopt returned character code 0%o ??\n", c);
-		}
-	}
+	parse_args(argc, argv, &config);
 
 	if (numa_available() != 0) {
 		perror("numa_available");
+		fprintf(stderr, "No support for NUMA is available in this system\n");
 		exit(1);
 	}
 

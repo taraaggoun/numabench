@@ -70,7 +70,7 @@ void free_buffer(struct Buf *buffer) {
 		munmap(buffer, sizeof(struct Buf) + buffer->size);
 }
 
-struct Buf *do_buffer_node(int node, size_t size) {
+struct Buf *do_buffer_node(unsigned int node, size_t size) {
 	setaffinity_node(node);
 	return do_buffer(size);
 }
@@ -148,10 +148,12 @@ void print_recap(const struct Config *config) {
 	fprintf(stderr, "\n");
 }
 
-// write all the dirty pages from the pagecache
+/* write all the dirty pages from the pagecache */
 static void sync_caches() {
 	int pid, status;
-	if ((pid = fork()) == 0) {
+
+	pid = fork();
+	if (fork() == 0) {
 		if (execl("/bin/sync", "sync", NULL) < 0) {
 			perror("execv");
 			exit(1);
@@ -206,9 +208,9 @@ int regenerate_pagecache(const struct Config *config) {
 		exit(1);
 	}
 	int fd = open(config->file_name, O_RDWR);
-	long acc = 0;
+	int acc = 0;
 	while (read(fd, read_buffer, PAGE_SIZE) > 0) {
-		acc += (long)read_buffer->data[0];
+		acc += read_buffer->data[0];
 	}
 	close(fd);
 	free_buffer(read_buffer);
@@ -226,9 +228,9 @@ size_t min3(size_t a, size_t b, size_t c) {
 }
 
 inline double diff_timespec_us(const struct timespec *time1,
-                        const struct timespec *time0) {
-	return (time1->tv_sec - time0->tv_sec) * 1e6 +
-	       (time1->tv_nsec - time0->tv_nsec) / 1e3;
+                               const struct timespec *time0) {
+	return (double)(time1->tv_sec - time0->tv_sec) * 1e6 +
+	       (double)(time1->tv_nsec - time0->tv_nsec) / 1e3;
 }
 
 double file_operation(const char *file_name, struct Buf *buffer,
@@ -252,11 +254,11 @@ double file_operation(const char *file_name, struct Buf *buffer,
 	size_t sz;
 
 	do {
-		long offset = 0;
+		unsigned long offset = 0;
 
 		if (random_op) {
 			offset = ((random() << 32) | random()) % (filesize - 1);
-			if (lseek(fd, offset, SEEK_SET) == -1)
+			if (lseek(fd, (long)offset, SEEK_SET) == -1)
 				perror("lseek");
 		}
 
@@ -266,8 +268,9 @@ double file_operation(const char *file_name, struct Buf *buffer,
 			          min(readChunkSize, filesize - total));
 			break;
 		case Write:
-			sz = write(fd, buffer->data + total,
-			           min3(readChunkSize, filesize - offset, filesize - total));
+			sz =
+				write(fd, buffer->data + total,
+			          min3(readChunkSize, filesize - offset, filesize - total));
 			break;
 		}
 		total += sz;
@@ -275,7 +278,8 @@ double file_operation(const char *file_name, struct Buf *buffer,
 
 	} while (left > 0);
 	if (total != filesize) {
-		fprintf(stderr, "error on size read/write %zd %zd\n", total, buffer->size);
+		fprintf(stderr, "error on size read/write %zd %zd\n", total,
+		        buffer->size);
 		exit(1);
 	}
 	close(fd);
@@ -327,7 +331,8 @@ void compute_results(int i, double time, struct Buf *buffer,
                      struct Results *results) {
 	unsigned int thread_node;
 	unsigned int buffer_node = buffer_node_maxpage(buffer->data, buffer->size);
-	int status;
+	long status;
+
 	status = syscall(SYS_getcpu, NULL, &thread_node, NULL);
 	if (status < 0) {
 		perror("getcpu");
@@ -337,7 +342,7 @@ void compute_results(int i, double time, struct Buf *buffer,
 	results->times_us[i] = time;
 	results->read_nodes[i] = thread_node;
 	buffer_node_pages(buffer->data, buffer->size,
-	                  &results->buffer_nodes[get_num_nodes() * i]);
+	                  &results->buffer_nodes[(size_t)get_num_nodes() * i]);
 
 	fprintf(stderr, "(%u,%u,%u): %f\n", thread_node, results->pagecache_node,
 	        buffer_node, time);
@@ -348,8 +353,8 @@ void do_benchmark(const struct Config *config) {
 	setaffinity_node(config->placement.thread);
 	regenerate_pagecache(config);
 	setaffinity_node(config->placement.thread);
-	struct Buf *buffer =
-		do_buffer_node(config->placement.buffer, file_size(config->file_name));
+	struct Buf *buffer = do_buffer_node((int)config->placement.buffer,
+	                                    file_size(config->file_name));
 	setaffinity_node(config->placement.thread);
 
 	if (!config->pages_migration) {
@@ -362,7 +367,7 @@ void do_benchmark(const struct Config *config) {
 		}
 	}
 
-	config_module(buffer->data, config->placement.pagecache, getpid(),
+	config_module(buffer->data, (int)config->placement.pagecache, getpid(),
 	              buffer->size);
 	start_module();
 
@@ -374,7 +379,7 @@ void do_benchmark(const struct Config *config) {
 		file_operation(config->file_name, buffer, config->operation,
 		               config->random_operation);
 		force_log_module();
-		// compute_results(i, time, buffer, results);
+		/* compute_results(i, time, buffer, results); */
 	}
 
 	pause_module();

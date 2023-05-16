@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define PAGE_SIZE (size_t)0x1000
-#define READSIZE 2 * (PAGE_SIZE)
 #define MAX_NODES_POSSIBLE 16
+#define PAGE_SIZE (size_t)0x1000
+#define READSIZE (2 * (PAGE_SIZE))
 #define ARRAY_SIZE MAX_NODES_POSSIBLE
 #define ALIGN_TO_PAGE(x)                                                       \
 	((void *)((((unsigned long)(x)) / (unsigned long)PAGE_SIZE) *              \
@@ -49,7 +49,7 @@ struct Buf {
 
 size_t file_size(const char *test_file_name);
 struct Buf *do_buffer(size_t size);
-struct Buf *do_buffer_node(int node, size_t size);
+struct Buf *do_buffer_node(unsigned int node, size_t size);
 enum Layout placement_to_layout(const struct Placement *placement);
 size_t min(size_t a, size_t b);
 unsigned int buffer_node_maxpage(char *ptr, size_t len);

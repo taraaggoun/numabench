@@ -1,5 +1,6 @@
 #include "json.h"
 #include "numabench.h"
+#include <stddef.h>
 #include <stdio.h>
 
 void uint_array_to_json(unsigned int *array, unsigned int length, bool ending) {
@@ -32,9 +33,9 @@ void buffer_array_to_json(unsigned int *array, unsigned int length,
                           unsigned int max_numa_nodes, bool ending) {
 	printf("[");
 	for (unsigned int i = 0; i < length - 1; i++) {
-		uint_array_to_json(&array[i * max_numa_nodes], max_numa_nodes, false);
+		uint_array_to_json(&array[(size_t)i * max_numa_nodes], max_numa_nodes, false);
 	}
-	uint_array_to_json(&array[(length - 1) * max_numa_nodes], max_numa_nodes,
+	uint_array_to_json(&array[((size_t)length - 1) * max_numa_nodes], max_numa_nodes,
 	                   true);
 	if (ending)
 		printf("]");

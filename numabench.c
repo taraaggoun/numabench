@@ -17,6 +17,14 @@
 #include <time.h>
 #include <unistd.h>
 
+static void seed_random() {
+	struct timespec a;
+	if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
+		perror("clock a");
+	}
+	srandom(a.tv_nsec);
+}
+
 size_t file_size(const char *test_file_name) {
 	struct stat st;
 	if (stat(test_file_name, &st) != 0 || st.st_size < 0) {
@@ -213,7 +221,11 @@ size_t min(size_t a, size_t b) {
 	return b;
 }
 
-double diff_timespec_us(const struct timespec *time1,
+size_t min3(size_t a, size_t b, size_t c) {
+	return min(min(a, b), c);
+}
+
+inline double diff_timespec_us(const struct timespec *time1,
                         const struct timespec *time0) {
 	return (time1->tv_sec - time0->tv_sec) * 1e6 +
 	       (time1->tv_nsec - time0->tv_nsec) / 1e3;
@@ -236,45 +248,38 @@ double file_operation(const char *file_name, struct Buf *buffer,
 		exit(1);
 	}
 	size_t total = 0;
-	double total_time = 0.;
+	size_t left = filesize;
 	size_t sz;
-	struct timespec start, end;
 
 	do {
-		long offset;
-		if (random_op)
+		long offset = 0;
+
+		if (random_op) {
 			offset = ((random() << 32) | random()) % (filesize - 1);
+			if (lseek(fd, offset, SEEK_SET) == -1)
+				perror("lseek");
+		}
 
 		switch (op) {
 		case Read:
-			if (random_op)
-				if (lseek(fd, offset, SEEK_SET) == -1) {
-					perror("lseek");
-				}
-
-			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 			sz = read(fd, buffer->data + total,
 			          min(readChunkSize, filesize - total));
-			clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 			break;
 		case Write:
-			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-			sz = write(fd, buffer->data + offset,
-			           min(readChunkSize, filesize - total));
-			clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+			sz = write(fd, buffer->data + total,
+			           min3(readChunkSize, filesize - offset, filesize - total));
 			break;
 		}
-		total_time += diff_timespec_us(&end, &start);
 		total += sz;
+		left -= sz;
 
-	} while (sz > 0);
+	} while (left > 0);
 	if (total != filesize) {
-		fprintf(stderr, "read random erreur %zd %zd %zd\n", total, filesize,
-		        buffer->size);
+		fprintf(stderr, "error on size read/write %zd %zd\n", total, buffer->size);
 		exit(1);
 	}
 	close(fd);
-	return total_time;
+	return 0;
 }
 
 double read_file(const char *file_name, struct Buf *buffer,
@@ -491,5 +496,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	print_recap(&config);
+	seed_random();
 	do_benchmark(&config);
 }

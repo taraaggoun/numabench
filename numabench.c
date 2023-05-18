@@ -86,6 +86,7 @@ inline static void print_help() {
 	printf("\t--sequential -s\n");
 	printf("\t--pagecache nid\n");
 	printf("\t--iterations -i iterations\n");
+	printf("\t--verbose -v\n");
 }
 
 static char *layout_to_string(enum Layout layout) {
@@ -153,11 +154,11 @@ static void sync_caches() {
 	int pid, status;
 
 	pid = fork();
-	if (fork() == 0) {
+	if (pid == 0) {
 		if (execl("/bin/sync", "sync", NULL) < 0) {
 			perror("execv");
-			exit(1);
 		}
+		exit(1);
 	} else if (pid < 0) {
 		perror("fork");
 		exit(1);
@@ -380,6 +381,13 @@ void do_benchmark(const struct Config *config) {
 		               config->random_operation);
 		force_log_module();
 		/* compute_results(i, time, buffer, results); */
+		if (config->debug) {
+			struct timespec a;
+			if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
+				perror("clock a");
+			}
+			printf("%lu %d\n", (unsigned long)(a.tv_sec * 1e9 + a.tv_nsec), i);
+		}
 	}
 
 	pause_module();
@@ -404,9 +412,10 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 			{"random", no_argument, 0, 'r'},
 			{"sequential", no_argument, 0, 's'},
 			{"help", no_argument, 0, 'h'},
+			{"verbose", no_argument, 0, 'v'},
 			{0, 0, 0, 0}};
 
-		c = getopt_long(argc, argv, "rsnhm:i:o:f:t:b:p:", long_options,
+		c = getopt_long(argc, argv, "rsnhvm:i:o:f:t:b:p:", long_options,
 		                &option_index);
 		if (c == -1)
 			break;
@@ -459,6 +468,9 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 		case 'f':
 			config->file_name = optarg;
 			break;
+		case 'v':
+			config->debug = true;
+			break;
 		case 'h':
 			print_help();
 			exit(0);
@@ -490,6 +502,7 @@ int main(int argc, char *argv[]) {
 		.pages_migration = false,
 		.thread_migration = false,
 		.random_operation = true,
+		.debug = true,
 	};
 
 	parse_args(argc, argv, &config);

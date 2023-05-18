@@ -30,6 +30,7 @@ struct Config {
 	bool random_operation;
 	enum Layout layout;
 	char *file_name;
+	bool debug;
 };
 
 struct Results {

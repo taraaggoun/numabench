@@ -130,23 +130,22 @@ char *operation_to_string(const enum Operation operation) {
 
 void print_placement(const struct Placement *placement) {
 	const struct Placement *p = placement;
-	fprintf(stderr, "(%d,%d,%d)\n", p->thread, p->pagecache, p->buffer);
+	printf(stderr, "(%d,%d,%d)\n", p->thread, p->pagecache, p->buffer);
 }
 
 void print_recap(const struct Config *config) {
-	fprintf(stderr, "operation is:        %s %s\n",
-	        config->random_operation ? "random" : "sequential",
-	        operation_to_string(config->operation));
-	fprintf(stderr, "file:                %s\n", config->file_name);
-	fprintf(stderr, "page  migration:     %s\n",
-	        config->pages_migration ? "allowed" : "not allowed");
-	fprintf(stderr, "thread migration:    %s\n",
-	        config->thread_migration ? "allowed" : "not allowed");
-	fprintf(stderr, "starting in layout:  %s\n",
-	        layout_to_string(placement_to_layout(&config->placement)));
-	fprintf(stderr, "placement is:        ");
+	printf("operation is:        %s %s\n",
+	       config->random_operation ? "random" : "sequential",
+	       operation_to_string(config->operation));
+	printf("file:                %s\n", config->file_name);
+	printf("page  migration:     %s\n",
+	       config->pages_migration ? "allowed" : "not allowed");
+	printf("thread migration:    %s\n",
+	       config->thread_migration ? "allowed" : "not allowed");
+	printf("starting in layout:  %s\n",
+	       layout_to_string(placement_to_layout(&config->placement)));
+	printf("placement is:        ");
 	print_placement(&config->placement);
-	fprintf(stderr, "\n");
 }
 
 /* write all the dirty pages from the pagecache */
@@ -515,5 +514,10 @@ int main(int argc, char *argv[]) {
 
 	print_recap(&config);
 	seed_random();
+	struct timespec a, b;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
 	do_benchmark(&config);
+	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
+	printf("run took %fms\n\n",
+	       (b.tv_sec - a.tv_sec) * 1e3 + (b.tv_nsec - a.tv_nsec) * 1e-6);
 }

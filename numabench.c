@@ -501,7 +501,7 @@ int main(int argc, char *argv[]) {
 		.pages_migration = false,
 		.thread_migration = false,
 		.random_operation = true,
-		.debug = true,
+		.debug = false,
 	};
 
 	parse_args(argc, argv, &config);

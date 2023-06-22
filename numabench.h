@@ -6,7 +6,7 @@
 
 #define MAX_NODES_POSSIBLE 16
 #define PAGE_SIZE (size_t)0x1000
-#define READSIZE (2 * (PAGE_SIZE))
+#define READSIZE (10 * 1024 * 1024)
 #define ARRAY_SIZE MAX_NODES_POSSIBLE
 #define ALIGN_TO_PAGE(x)                                                       \
 	((void *)((((unsigned long)(x)) / (unsigned long)PAGE_SIZE) *              \
@@ -30,7 +30,7 @@ struct Config {
 	bool random_operation;
 	enum Layout layout;
 	char *file_name;
-	bool debug;
+	bool verbose;
 };
 
 struct Results {

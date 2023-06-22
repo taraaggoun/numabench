@@ -131,7 +131,7 @@ char *operation_to_string(const enum Operation operation) {
 
 void print_placement(const struct Placement *placement) {
 	const struct Placement *p = placement;
-	printf(stderr, "(%d,%d,%d)\n", p->thread, p->pagecache, p->buffer);
+	printf("(%d,%d,%d)\n", p->thread, p->pagecache, p->buffer);
 }
 
 void print_recap(const struct Config *config) {
@@ -170,7 +170,7 @@ void drop_caches() {
 	int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
 	if (write(fd, "1", 1) <= 0) {
 		perror("write");
-		fprintf(stderr, "drop cache\n");
+		fprintf(stderr, "drop cache requires root permission\n");
 		exit(1);
 	}
 	close(fd);
@@ -381,7 +381,7 @@ void do_benchmark(const struct Config *config) {
 		               config->random_operation);
 		force_log_module();
 		/* compute_results(i, time, buffer, results); */
-		if (config->debug) {
+		if (config->verbose) {
 			struct timespec a;
 			if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
 				perror("clock a");
@@ -469,7 +469,7 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 			config->file_name = optarg;
 			break;
 		case 'v':
-			config->debug = true;
+			config->verbose = true;
 			break;
 		case 'h':
 			print_help();
@@ -503,7 +503,7 @@ int main(int argc, char *argv[]) {
 		.pages_migration = false,
 		.thread_migration = false,
 		.random_operation = true,
-		.debug = false,
+		.verbose = false,
 	};
 
 	/* parse the command arguments */

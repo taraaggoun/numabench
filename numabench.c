@@ -17,6 +17,7 @@
 #include <time.h>
 #include <unistd.h>
 
+/* generate a random seed based on nanosecond */
 static void seed_random() {
 	struct timespec a;
 	if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
@@ -488,6 +489,7 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 }
 
 int main(int argc, char *argv[]) {
+	/* default config */
 	struct Config config = {
 		.placement =
 			{
@@ -504,19 +506,27 @@ int main(int argc, char *argv[]) {
 		.debug = false,
 	};
 
+	/* parse the command arguments */
 	parse_args(argc, argv, &config);
 
+	/* exit if numa is not available on this machine */
 	if (numa_available() != 0) {
 		perror("numa_available");
 		fprintf(stderr, "No support for NUMA is available in this system\n");
 		exit(1);
 	}
-
 	print_recap(&config);
-	seed_random();
+
+	/* random seed for random operations */
+	if (config.random_operation)
+		seed_random();
+
 	struct timespec a, b;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
+
+	/* run the benchmark */
 	do_benchmark(&config);
+
 	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
 	printf("run took %fms\n\n",
 	       (b.tv_sec - a.tv_sec) * 1e3 + (b.tv_nsec - a.tv_nsec) * 1e-6);

@@ -1,6 +1,4 @@
 #include "numabench.h"
-#include "json.h"
-#include "module.h"
 #include <fcntl.h>
 #include <getopt.h>
 #include <numa.h>
@@ -101,7 +99,8 @@ static char *layout_to_string(enum Layout layout) {
 	case (DD):
 		return "DD";
 	default:
-		fprintf(stderr, "switch layout not found\n");
+		if (!fprintf(stderr, "switch layout not found\n"))
+			perror("fprintf");
 		exit(1);
 	}
 }
@@ -135,6 +134,7 @@ void print_placement(const struct Placement *placement) {
 }
 
 void print_recap(const struct Config *config) {
+	printf("pid is:              %d\n", getpid());
 	printf("operation is:        %s %s\n",
 	       config->random_operation ? "random" : "sequential",
 	       operation_to_string(config->operation));
@@ -170,7 +170,8 @@ void drop_caches() {
 	int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
 	if (write(fd, "1", 1) <= 0) {
 		perror("write");
-		fprintf(stderr, "drop cache requires root permission\n");
+		if (!fprintf(stderr, "drop cache requires root permission\n"))
+			perror("fprintf");
 		exit(1);
 	}
 	close(fd);
@@ -201,21 +202,26 @@ int regenerate_pagecache(const struct Config *config) {
 	sync_caches();
 	drop_caches();
 
-	setaffinity_node(config->placement.pagecache);
+	if (fork() == 0) {
 
-	struct Buf *read_buffer = do_buffer(sizeof(char) * READSIZE);
-	if (read_buffer == NULL) {
-		perror("mmap");
-		exit(1);
+		setaffinity_node(config->placement.pagecache);
+
+		struct Buf *read_buffer =
+			do_buffer(sizeof(char) * (unsigned long)READSIZE);
+		if (read_buffer == NULL) {
+			perror("mmap");
+			exit(1);
+		}
+		int fd = open(config->file_name, O_RDWR);
+		int acc = 0;
+		while (read(fd, read_buffer, PAGE_SIZE) > 0) {
+			acc += read_buffer->data[0];
+		}
+		close(fd);
+		free_buffer(read_buffer);
+		exit(0);
 	}
-	int fd = open(config->file_name, O_RDWR);
-	int acc = 0;
-	while (read(fd, read_buffer, PAGE_SIZE) > 0) {
-		acc += read_buffer->data[0];
-	}
-	close(fd);
-	free_buffer(read_buffer);
-	return acc;
+	return 0;
 }
 
 size_t min(size_t a, size_t b) {
@@ -236,14 +242,16 @@ inline double diff_timespec_us(const struct timespec *time1,
 
 double file_operation(const char *file_name, struct Buf *buffer,
                       enum Operation op, const bool random_op) {
-	size_t readChunkSize = READSIZE;
+	size_t readChunkSize = (unsigned long)READSIZE;
 	size_t filesize = file_size(file_name);
 
 	if (!buffer || buffer->size != filesize)
-		fprintf(stderr, "incorrect buffer size");
+		if (!fprintf(stderr, "incorrect buffer size"))
+			perror("fprintf");
 
 	if (filesize < readChunkSize)
-		fprintf(stderr, "file is too small for reads");
+		if (!fprintf(stderr, "file is too small for reads"))
+			perror("fprintf");
 
 	int fd = open(file_name, O_RDWR);
 	if (fd < 0) {
@@ -279,8 +287,9 @@ double file_operation(const char *file_name, struct Buf *buffer,
 
 	} while (left > 0);
 	if (total != filesize) {
-		fprintf(stderr, "error on size read/write %zd %zd\n", total,
-		        buffer->size);
+		if (!fprintf(stderr, "error on size read/write %zd %zd\n", total,
+		             buffer->size))
+			perror("fprintf");
 		exit(1);
 	}
 	close(fd);
@@ -306,7 +315,8 @@ void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node) {
 		                         MPOL_F_NODE | MPOL_F_ADDR);
 
 		if (ret < 0)
-			fprintf(stderr, "get_mempolicy failed");
+			if (!fprintf(stderr, "get_mempolicy failed"))
+				perror("fprintf");
 
 		pages_per_node[node]++;
 	}
@@ -345,8 +355,9 @@ void compute_results(int i, double time, struct Buf *buffer,
 	buffer_node_pages(buffer->data, buffer->size,
 	                  &results->buffer_nodes[(size_t)get_num_nodes() * i]);
 
-	fprintf(stderr, "(%u,%u,%u): %f\n", thread_node, results->pagecache_node,
-	        buffer_node, time);
+	if (!fprintf(stderr, "(%u,%u,%u): %f\n", thread_node,
+	             results->pagecache_node, buffer_node, time))
+		perror("fprintf");
 }
 
 void do_benchmark(const struct Config *config) {
@@ -368,10 +379,6 @@ void do_benchmark(const struct Config *config) {
 		}
 	}
 
-	config_module(buffer->data, (int)config->placement.pagecache, getpid(),
-	              buffer->size);
-	start_module();
-
 	if (config->thread_migration) {
 		setaffinity_any();
 	}
@@ -379,18 +386,17 @@ void do_benchmark(const struct Config *config) {
 	for (int i = 0; i < config->iteration_nr; i++) {
 		file_operation(config->file_name, buffer, config->operation,
 		               config->random_operation);
-		force_log_module();
 		/* compute_results(i, time, buffer, results); */
 		if (config->verbose) {
 			struct timespec a;
 			if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
 				perror("clock a");
 			}
-			printf("%lu %d\n", (unsigned long)(a.tv_sec * 1e9 + a.tv_nsec), i);
+			printf("%lu %d\n",
+			       (unsigned long)((double)a.tv_sec * 1e9 + (double)a.tv_nsec),
+			       i);
 		}
 	}
-
-	pause_module();
 
 	free_buffer(buffer);
 }
@@ -460,7 +466,8 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 			else if (strcmp(optarg, "write") == 0)
 				config->operation = Write;
 			else {
-				fprintf(stderr, "operation %s is not supported\n", optarg);
+				if (!fprintf(stderr, "operation %s is not supported\n", optarg))
+					perror("fprintf");
 				print_help();
 				exit(1);
 			}
@@ -477,13 +484,17 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 		case '?':
 			break;
 		default:
-			fprintf(stderr, "?? getopt returned character code 0%o ??\n", c);
+			if (!fprintf(stderr, "?? getopt returned character code 0%o ??\n",
+			             c))
+				perror("fprintf");
 		}
 	}
 
 	if (random_set && sequential_set) {
 		print_help();
-		fprintf(stderr, "--sequential and --random are mutually exclusive\n");
+		if (!fprintf(stderr,
+		             "--sequential and --random are mutually exclusive\n"))
+			perror("fprintf");
 		exit(1);
 	}
 }
@@ -512,7 +523,9 @@ int main(int argc, char *argv[]) {
 	/* exit if numa is not available on this machine */
 	if (numa_available() != 0) {
 		perror("numa_available");
-		fprintf(stderr, "No support for NUMA is available in this system\n");
+		if (!fprintf(stderr,
+		             "No support for NUMA is available in this system\n"))
+			perror("fprintf");
 		exit(1);
 	}
 	print_recap(&config);
@@ -528,6 +541,6 @@ int main(int argc, char *argv[]) {
 	do_benchmark(&config);
 
 	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
-	printf("run took %fms\n\n",
-	       (b.tv_sec - a.tv_sec) * 1e3 + (b.tv_nsec - a.tv_nsec) * 1e-6);
+	printf("run took %fms\n\n", (double)(b.tv_sec - a.tv_sec) * 1e3 +
+	                                (double)(b.tv_nsec - a.tv_nsec) * 1e-6);
 }

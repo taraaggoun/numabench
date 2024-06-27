@@ -1,4 +1,4 @@
-SRC = json.c numabench.c module.c
+SRC = numabench.c
 OBJ = $(SRC:.c=.o)
 LDFLAGS = -lnuma
 
@@ -12,9 +12,6 @@ numabench: ${OBJ}
 
 testfile:
 	dd if=/dev/urandom of=testfile bs=1M count=200
-
-debug: testfile
-	gcc json.c numabench.c -fsanitize=leak,address -lnuma -o numabench
 
 clean:
 	rm -f ${OBJ} testfile numabench

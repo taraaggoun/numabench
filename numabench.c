@@ -75,8 +75,8 @@ struct Buf *do_buffer_node(unsigned int node, size_t size) {
 }
 
 inline static void print_help() {
-	printf("pagecache [-o operation] [-m migration] [-i iterations] [-t nid] "
-	       "[-p nid] [-b nid] [ -r | -n ] [-h]\n");
+	printf("numabench [-o operation] [-m migration] [-i iterations] [-t nid] "
+	       "[-p nid] [-b nid] [ -r | -n ] [-h]\n\n");
 	printf("\t--mode -o [read|write]\n");
 	printf("\t--allow-migration -m [pages|thread]\n");
 	printf("\t--thread nid\n");
@@ -85,7 +85,9 @@ inline static void print_help() {
 	printf("\t--sequential -s\n");
 	printf("\t--pagecache nid\n");
 	printf("\t--iterations -i iterations\n");
-	printf("\t--verbose -v\n");
+	printf("\t--verbose -v\n\n");
+	printf("example:\n");
+	printf("numabench -o read -m pages -m thread -i 100 -t 0 -p 1 -b 0 -r\n");
 }
 
 static char *layout_to_string(enum Layout layout) {

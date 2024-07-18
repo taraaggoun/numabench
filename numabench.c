@@ -15,6 +15,28 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <sys/ioctl.h>
+#define IOCTL_MAGIC 'N'
+#define PIDW _IOW(IOCTL_MAGIC, 0, char *)
+
+/**
+ * Insert the pid in the kernel array with ioctl
+ */
+static void insert_pid_ioctl(pid_t pid)
+{
+	int fd = open("/dev/openctl", O_WRONLY);
+	if (fd == -1)
+		perror("open openctl");
+
+	char buf[10] = { 0 };
+	snprintf(buf, 10, "%d", pid);
+	if (ioctl(fd, PIDW, buf) == -1)
+		perror("ioctl");
+
+	close(fd);
+	// printf("%d add in liste\n", pid);
+}
+
 /* generate a random seed based on nanosecond */
 static void seed_random() {
 	struct timespec a;
@@ -530,11 +552,13 @@ int main(int argc, char *argv[]) {
 			perror("fprintf");
 		exit(1);
 	}
-	print_recap(&config);
+	// print_recap(&config);
 
 	/* random seed for random operations */
 	if (config.random_operation)
 		seed_random();
+
+	insert_pid_ioctl(getpid());
 
 	struct timespec a, b;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
@@ -543,6 +567,6 @@ int main(int argc, char *argv[]) {
 	do_benchmark(&config);
 
 	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
-	printf("run took %fms\n\n", (double)(b.tv_sec - a.tv_sec) * 1e3 +
+	printf("%f\n", (double)(b.tv_sec - a.tv_sec) * 1e3 +
 	                                (double)(b.tv_nsec - a.tv_nsec) * 1e-6);
 }

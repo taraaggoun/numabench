@@ -34,7 +34,7 @@ def plot_bar_4_with_std(values1, values2, values3, values4, config):
     ax.set_title('Temps moyen de lecture randomn avec écart type')
     ax.set_xticks(x)
     ax.set_xticklabels(['LL', 'DL', 'LD', 'DD'])
-    plt.savefig("media/read_" + config + ".png") # Sauvegarder le graphique dans un fichier
+    plt.savefig("media/graph/read_" + config + ".png") # Sauvegarder le graphique dans un fichier
     plt.close()
 
 def plot_bar_16_with_std(values_list):
@@ -51,10 +51,10 @@ def plot_bar_16_with_std(values_list):
     fig, ax = plt.subplots()
 
     # Create bars for each set of values
-    rects1 = ax.bar(x - (2 * width), means[:4], width, yerr=std_devs[:4], capsize=5, label='Témoin')
-    rects2 = ax.bar(x - width, means[4:8], width, yerr=std_devs[4:8], capsize=5, label='Force')
-    rects3 = ax.bar(x + width, means[8:12], width, yerr=std_devs[8:12], capsize=5, label='Try')
-    rects3 = ax.bar(x + (2 * width), means[12:], width, yerr=std_devs[12:], capsize=5, label='Exec')
+    rects1 = ax.bar(x - (1.5 * width), means[:4], width, yerr=std_devs[:4], capsize=5, label='Témoin')
+    rects2 = ax.bar(x - (0.5 * width), means[4:8], width, yerr=std_devs[4:8], capsize=5, label='Force')
+    rects3 = ax.bar(x + (0.5 * width), means[8:12], width, yerr=std_devs[8:12], capsize=5, label='Try')
+    rects3 = ax.bar(x + (1.5 * width), means[12:], width, yerr=std_devs[12:], capsize=5, label='Exec')
 
     # Labels and titles
     ax.set_ylabel('Temps en milliseconde')
@@ -64,43 +64,43 @@ def plot_bar_16_with_std(values_list):
     ax.legend()
 
     # Save the plot
-    plt.savefig("media/read_all.png")
+    plt.savefig("media/graph/read_all.png")
     plt.close()
 
 def main():
     # Temoin
-    tall_ll_0 = get_dict("media/LL_0")
-    tall_dl_0 = get_dict("media/DL_0")
-    tall_ld_0 = get_dict("media/LD_0")
-    tall_dd_0 = get_dict("media/DD_0")
+    tall_ll_0 = get_dict("media/data/LL_0")
+    tall_dl_0 = get_dict("media/data/DL_0")
+    tall_ld_0 = get_dict("media/data/LD_0")
+    tall_dd_0 = get_dict("media/data/DD_0")
     plot_bar_4_with_std(tall_ll_0, tall_dl_0, tall_ld_0, tall_dd_0, "0")
 
     # Force
-    tall_ll_1 = get_dict("media/LL_1")
-    tall_dl_1 = get_dict("media/DL_1")
-    tall_ld_1 = get_dict("media/LD_1")
-    tall_dd_1 = get_dict("media/DD_1")
+    tall_ll_1 = get_dict("media/data/LL_1")
+    tall_dl_1 = get_dict("media/data/DL_1")
+    tall_ld_1 = get_dict("media/data/LD_1")
+    tall_dd_1 = get_dict("media/data/DD_1")
     plot_bar_4_with_std(tall_ll_1, tall_dl_1, tall_ld_1, tall_dd_1, "1")
     
     # Try
-    tall_ll_2 = get_dict("media/LL_2")
-    tall_dl_2 = get_dict("media/DL_2")
-    tall_ld_2 = get_dict("media/LD_2")
-    tall_dd_2 = get_dict("media/DD_2")
+    tall_ll_2 = get_dict("media/data/LL_2")
+    tall_dl_2 = get_dict("media/data/DL_2")
+    tall_ld_2 = get_dict("media/data/LD_2")
+    tall_dd_2 = get_dict("media/data/DD_2")
     plot_bar_4_with_std(tall_ll_2, tall_dl_2, tall_ld_2, tall_dd_2, "2")
 
-    # # Exec
-    # tall_ll_3 = get_dict("media/LL_3")
-    # tall_dl_3 = get_dict("media/DL_3")
-    # tall_ld_3 = get_dict("media/LD_3")
-    # tall_dd_3 = get_dict("media/DD_3")
-    # plot_bar_4_with_std(tall_ll_3, tall_dl_3, tall_ld_3, tall_dd_3, "3")
+    # Exec
+    tall_ll_3 = get_dict("media/data/LL_3")
+    tall_dl_3 = get_dict("media/data/DL_3")
+    tall_ld_3 = get_dict("media/data/LD_3")
+    tall_dd_3 = get_dict("media/data/DD_3")
+    plot_bar_4_with_std(tall_ll_3, tall_dl_3, tall_ld_3, tall_dd_3, "3")
     
     values  = [tall_ll_0, tall_dl_0, tall_ld_0, tall_dd_0]
     values += [tall_ll_1, tall_dl_1, tall_ld_1, tall_dd_1]
     values += [tall_ll_2, tall_dl_2, tall_ld_2, tall_dd_2]
-    values += [[0], [0], [0], [0]]
-    # values += [tall_ll_3, tall_dl_3, tall_ld_3, tall_dd_3]
+    # values += [[0], [0], [0], [0]]
+    values += [tall_ll_3, tall_dl_3, tall_ld_3, tall_dd_3]
     plot_bar_16_with_std(values)
 
 if __name__ == "__main__":

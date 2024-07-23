@@ -7,8 +7,6 @@ fi
 
 mkdir -p media
 
-dd if=/dev/urandom of=media/file bs=1G count=1
-
 for ((i=1; i<=10; i++))
 do
     # LL

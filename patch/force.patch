@@ -135,8 +135,8 @@ diff --color -Nur linux-6.5.7/fs/opti_open.c linux-6.5.7force/fs/opti_open.c
 +*/
 +void mv_core(void)
 +{
-+	int tab[NR_CPUS] = { 0 };
-+	int node_id = get_core_pid(tab, NR_CPUS);
++	int tab[4] = { 0 };
++	int node_id = get_core_pid(tab, 4);
 +	if (node_id == -1) {
 +		pr_info("node_id = -1\n");
 +		return;

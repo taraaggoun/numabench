@@ -48,32 +48,17 @@ int main() {
     }
 
     for (int i = 1; i <= 10; i++) {
-        // Exécuter les commandes sur le nœud 0
+        // Local
         set_cpu_affinity(0);
-	setaffinity_any();
-        // LL
-	execute_command("./regenerate_pagecache");
-        execute_command("./numabench -o read -m thread -i 1000 -t 0 -b 0 -p 0 -f testfile >> media/LL_3");
+        setaffinity_any();
+        execute_command("./regenerate_pagecache");
+        execute_command("./numabench -o read -m thread -i 1000 -t 0 -p 0 -f testfile >> media/LL_3");
         
-        // LD
-	set_cpu_affinity(0);
-	setaffinity_any();
-	execute_command("./regenerate_pagecache");
-        execute_command("./numabench -o read -m thread -i 1000 -t 0 -b 1 -p 0 -f testfile >> media/LD_3");
-        
-        // Exécuter les commandes sur le nœud 1
+        // Distant
         set_cpu_affinity(1);
-	setaffinity_any();
-        // DL
-	execute_command("./regenerate_pagecache");
-        execute_command("./numabench -o read -m thread -i 1000 -t 0 -b 0 -p 1 -f testfile >> media/DL_3");
-        
-        // DD
-        set_cpu_affinity(1);
-	setaffinity_any();
-	execute_command("./regenerate_pagecache");
-        execute_command("./numabench -o read -m thread -i 1000 -t 0 -b 1 -p 1 -f testfile >> media/DD_3");
+        setaffinity_any();
+        execute_command("./regenerate_pagecache");
+        execute_command("./numabench -o read -m thread -i 1000 -t 0 -p 1 -f testfile >> media/DL_3");
     }
-    
     return 0;
 }

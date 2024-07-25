@@ -11,7 +11,7 @@ numabench: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
 regenerate_pagecache:
-	${CC} regenerate_pagecache.c -o regenerate_pagecache-lnuma
+	${CC} regenerate_pagecache.c -o regenerate_pagecache -lnuma
 
 surnumabench:
 	${CC} surnumabench.c -lnuma -D_GNU_SOURCE

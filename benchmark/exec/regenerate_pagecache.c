@@ -66,7 +66,9 @@ int main()
 	setaffinity_node(0);
 
 	struct Buf *read_buffer =
-		do_buffer(sizeof(char) * (unsigned long)READSIZE);
+		 (struct Buf *)mmap(NULL, sizeof(char) * (unsigned long)READSIZE + sizeof(struct Buf),
+	                                        PROT_READ | PROT_WRITE,
+	                                        MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 	if (read_buffer == NULL) {
 		perror("mmap");
 		exit(1);

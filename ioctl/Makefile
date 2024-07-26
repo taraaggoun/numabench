@@ -1,5 +1,5 @@
 # Path to kernel
-KERNELDIR_LKP ?= /home/tara/linux-6.6.21
+KERNELDIR_LKP ?= ~/linux-6.6.21
 
 obj-m += openctl.o
 

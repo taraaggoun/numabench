@@ -75,31 +75,31 @@ def plot_bar_8_with_std(values_list):
 
 def main():
     # Témoin
-    local_0   = extract_first_real_time("media/data/local_1_0")
-    local_0  += extract_first_real_time("media/data/local_2_0")
-    remote_0  = extract_first_real_time("media/data/remote_1_0")
-    remote_0 += extract_first_real_time("media/data/remote_2_0")
+    local_0   = extract_first_real_time("media/data/make/local_1_0")
+    local_0  += extract_first_real_time("media/data/make/local_2_0")
+    remote_0  = extract_first_real_time("media/data/make/remote_1_0")
+    remote_0 += extract_first_real_time("media/data/make/remote_2_0")
     plot_bar_2_with_std(local_0, remote_0, "0")
 
     # Force
-    local_1   = extract_first_real_time("media/data/local_1_1")
-    local_1  += extract_first_real_time("media/data/local_2_1")
-    remote_1  = extract_first_real_time("media/data/remote_1_1")
-    remote_1 += extract_first_real_time("media/data/remote_2_1")
+    local_1   = extract_first_real_time("media/data/make/local_1_1")
+    local_1  += extract_first_real_time("media/data/make/local_2_1")
+    remote_1  = extract_first_real_time("media/data/make/remote_1_1")
+    remote_1 += extract_first_real_time("media/data/make/remote_2_1")
     plot_bar_2_with_std(local_1, remote_1, "1")
 
     # Try
-    local_2   = extract_first_real_time("media/data/local_1_2")
-    local_2  += extract_first_real_time("media/data/local_2_2")
-    remote_2  = extract_first_real_time("media/data/remote_1_2")
-    remote_2 += extract_first_real_time("media/data/remote_2_2")
+    local_2   = extract_first_real_time("media/data/make/local_1_2")
+    local_2  += extract_first_real_time("media/data/make/local_2_2")
+    remote_2  = extract_first_real_time("media/data/make/remote_1_2")
+    remote_2 += extract_first_real_time("media/data/make/remote_2_2")
     plot_bar_2_with_std(local_2, remote_2, "2")
 
     # Exec
-    local_3   = extract_first_real_time("media/data/local_1_3")
-    local_3  += extract_first_real_time("media/data/local_2_3")
-    remote_3  = extract_first_real_time("media/data/remote_1_3")
-    remote_3 += extract_first_real_time("media/data/remote_2_3")
+    local_3   = extract_first_real_time("media/data/make/local_1_3")
+    local_3  += extract_first_real_time("media/data/make/local_2_3")
+    remote_3  = extract_first_real_time("media/data/make/remote_1_3")
+    remote_3 += extract_first_real_time("media/data/make/remote_2_3")
     plot_bar_2_with_std(local_3, remote_3, "3")
 
     values = [local_0, remote_0, local_1, remote_1, local_2, remote_2, local_3, remote_3]

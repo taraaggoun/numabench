@@ -143,8 +143,8 @@ diff --color -Nur linux-6.5.7/fs/opti_open.c linux-6.5.7try/fs/opti_open.c
 +	}
 +
 +	// propose to the scheduler to go on core id
-+	pr_info(" Try to go to core : %d\n", core_id);
-+	current->numa_preferred_nid = core_id;
++	pr_info(" Try to go to core : %d\n", node_id);
++	current->numa_preferred_nid = node_id;
 +}
 diff --color -Nur linux-6.5.7/include/linux/mm.h linux-6.5.7try/include/linux/mm.h
 --- linux-6.5.7/include/linux/mm.h	2024-06-21 11:31:01.293839754 +0200

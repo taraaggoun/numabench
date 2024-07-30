@@ -265,7 +265,7 @@ inline double diff_timespec_us(const struct timespec *time1,
 }
 
 double file_operation(const char *file_name, struct Buf *buffer,
-                      enum Operation op, const bool random_op) {
+                      enum Operation op, const bool random_op, int fd) {
 	size_t readChunkSize = (unsigned long)READSIZE;
 	size_t filesize = file_size(file_name);
 
@@ -277,11 +277,6 @@ double file_operation(const char *file_name, struct Buf *buffer,
 		if (!fprintf(stderr, "file is too small for reads"))
 			perror("fprintf");
 
-	int fd = open(file_name, O_RDWR);
-	if (fd < 0) {
-		perror("open");
-		exit(1);
-	}
 	size_t total = 0;
 	size_t left = filesize;
 	size_t sz;
@@ -316,19 +311,18 @@ double file_operation(const char *file_name, struct Buf *buffer,
 			perror("fprintf");
 		exit(1);
 	}
-	close(fd);
 	return 0;
 }
 
-double read_file(const char *file_name, struct Buf *buffer,
-                 const bool random_op) {
-	return file_operation(file_name, buffer, Read, random_op);
-}
+// double read_file(const char *file_name, struct Buf *buffer,
+//                  const bool random_op) {
+// 	return file_operation(file_name, buffer, Read, random_op);
+// }
 
-double write_file(const char *file_name, struct Buf *buffer,
-                  const bool random_op) {
-	return file_operation(file_name, buffer, Write, random_op);
-}
+// double write_file(const char *file_name, struct Buf *buffer,
+//                   const bool random_op) {
+// 	return file_operation(file_name, buffer, Write, random_op);
+// }
 
 void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node) {
 
@@ -407,9 +401,18 @@ void do_benchmark(const struct Config *config) {
 		setaffinity_any();
 	}
 
+	struct timespec a, b;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
+
+	int fd = open(config->file_name, O_RDWR);
+	if (fd < 0) {
+		perror("open");
+		exit(1);
+	}
+
 	for (int i = 0; i < config->iteration_nr; i++) {
 		file_operation(config->file_name, buffer, config->operation,
-		               config->random_operation);
+		               config->random_operation, fd);
 		/* compute_results(i, time, buffer, results); */
 		if (config->verbose) {
 			struct timespec a;
@@ -421,7 +424,11 @@ void do_benchmark(const struct Config *config) {
 			       i);
 		}
 	}
+	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
+	printf("%f\n", (double)(b.tv_sec - a.tv_sec) * 1e3 +
+	                                (double)(b.tv_nsec - a.tv_nsec) * 1e-6);
 
+	close(fd);
 	free_buffer(buffer);
 }
 
@@ -560,13 +567,6 @@ int main(int argc, char *argv[]) {
 
 	insert_pid_ioctl(getpid());
 
-	struct timespec a, b;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
-
 	/* run the benchmark */
 	do_benchmark(&config);
-
-	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
-	printf("%f\n", (double)(b.tv_sec - a.tv_sec) * 1e3 +
-	                                (double)(b.tv_nsec - a.tv_nsec) * 1e-6);
 }

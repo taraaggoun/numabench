@@ -31,6 +31,7 @@ struct Config {
 	enum Layout layout;
 	char *file_name;
 	bool verbose;
+	int num_patch;
 };
 
 struct Results {

@@ -15,10 +15,10 @@
 #include <time.h>
 #include <unistd.h>
 
-/* write all the dirty pages from the pagecache */
-static void sync_caches() {
+// Ecrit toute les pages dirty du pagecache
+static void sync_caches()
+{
 	int pid, status;
-
 	pid = fork();
 	if (pid == 0) {
 		if (execl("/bin/sync", "sync", NULL) < 0) {
@@ -32,7 +32,9 @@ static void sync_caches() {
 	wait(&status);
 }
 
-void drop_caches() {
+// Vide le page cache
+void drop_caches()
+{
 	int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
 	if (write(fd, "1", 1) <= 0) {
 		perror("write");
@@ -43,7 +45,9 @@ void drop_caches() {
 	close(fd);
 }
 
-void setaffinity_node(unsigned int node) {
+// Change le mask pour tout les coeurs
+void setaffinity_node(unsigned int node)
+{
 	struct bitmask *bmp = numa_allocate_nodemask();
 	numa_bitmask_setbit(bmp, node);
 	if (numa_run_on_node_mask(bmp) < 0) {
@@ -51,11 +55,6 @@ void setaffinity_node(unsigned int node) {
 		exit(1);
 	}
 	numa_free_nodemask(bmp);
-}
-
-void free_buffer(struct Buf *buffer) {
-	if (buffer != NULL)
-		munmap(buffer, sizeof(struct Buf) + buffer->size);
 }
 
 int main()
@@ -66,18 +65,18 @@ int main()
 	setaffinity_node(0);
 
 	struct Buf *read_buffer =
-		 (struct Buf *)mmap(NULL, sizeof(char) * (unsigned long)READSIZE + sizeof(struct Buf),
-	                                        PROT_READ | PROT_WRITE,
-	                                        MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+		 (struct Buf *)mmap(NULL, sizeof(char) * (unsigned long) READSIZE + sizeof(struct Buf), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+	
 	if (read_buffer == NULL) {
 		perror("mmap");
 		exit(1);
 	}
+
 	int fd = open("testfile", O_RDWR);
 	int acc = 0;
-	while (read(fd, read_buffer, PAGE_SIZE) > 0) {
+	while (read(fd, read_buffer, PAGE_SIZE) > 0)
 		acc += read_buffer->data[0];
-	}
+
 	close(fd);
-	free_buffer(read_buffer);
+	munmap(read_buffer, sizeof(struct Buf) + buffer->size);
 }

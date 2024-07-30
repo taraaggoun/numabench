@@ -34,11 +34,11 @@ static void insert_pid_ioctl(pid_t pid)
 		perror("ioctl");
 
 	close(fd);
-	// printf("%d add in liste\n", pid);
 }
 
 /* generate a random seed based on nanosecond */
-static void seed_random() {
+static void seed_random()
+{
 	struct timespec a;
 	if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
 		perror("clock a");
@@ -46,7 +46,8 @@ static void seed_random() {
 	srandom(a.tv_nsec);
 }
 
-size_t file_size(const char *test_file_name) {
+size_t file_size(const char *test_file_name)
+{
 	struct stat st;
 	if (stat(test_file_name, &st) != 0 || st.st_size < 0) {
 		perror("stat");
@@ -55,7 +56,8 @@ size_t file_size(const char *test_file_name) {
 	return st.st_size;
 }
 
-struct Buf *do_buffer(size_t size) {
+struct Buf *do_buffer(size_t size)
+{
 	struct Buf *buffer = (struct Buf *)mmap(NULL, size + sizeof(struct Buf),
 	                                        PROT_READ | PROT_WRITE,
 	                                        MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
@@ -66,7 +68,8 @@ struct Buf *do_buffer(size_t size) {
 	return buffer;
 }
 
-void allocate_struct_result(struct Config *config, struct Results *results) {
+void allocate_struct_result(struct Config *config, struct Results *results)
+{
 	int len = results->iteration_nr;
 	results->read_node = config->placement.thread;
 	results->buffer_node = config->placement.buffer;
@@ -80,13 +83,15 @@ void allocate_struct_result(struct Config *config, struct Results *results) {
 	results->times_us = (double *)malloc(len * sizeof(double));
 }
 
-void free_struct_result(struct Results *results) {
+void free_struct_result(struct Results *results)
+{
 	free(results->read_nodes);
 	free(results->buffer_nodes);
 	free(results->times_us);
 }
 
-void free_buffer(struct Buf *buffer) {
+void free_buffer(struct Buf *buffer)
+{
 	if (buffer != NULL)
 		munmap(buffer, sizeof(struct Buf) + buffer->size);
 }
@@ -96,85 +101,9 @@ struct Buf *do_buffer_node(unsigned int node, size_t size) {
 	return do_buffer(size);
 }
 
-inline static void print_help() {
-	printf("numabench [-o operation] [-m migration] [-i iterations] [-t nid] "
-	       "[-p nid] [-b nid] [ -r | -n ] [-h]\n\n");
-	printf("\t--mode -o [read|write]\n");
-	printf("\t--allow-migration -m [pages|thread]\n");
-	printf("\t--thread nid\n");
-	printf("\t--buffer nid\n");
-	printf("\t--random -r\n");
-	printf("\t--sequential -s\n");
-	printf("\t--pagecache nid\n");
-	printf("\t--iterations -i iterations\n");
-	printf("\t--verbose -v\n\n");
-	printf("example:\n");
-	printf("numabench -o read -m pages -m thread -i 100 -t 0 -p 1 -b 0 -r\n");
-}
-
-static char *layout_to_string(enum Layout layout) {
-	switch (layout) {
-	case (LL):
-		return "LL";
-	case (LD):
-		return "LD";
-	case (DL):
-		return "DL";
-	case (DD):
-		return "DD";
-	default:
-		if (!fprintf(stderr, "switch layout not found\n"))
-			perror("fprintf");
-		exit(1);
-	}
-}
-
-enum Layout placement_to_layout(const struct Placement *placement) {
-	const struct Placement *p = placement;
-	if (p->thread == p->pagecache && p->thread == p->buffer) {
-		return LL;
-	} else if (p->thread == p->pagecache && p->thread != p->buffer) {
-		return LD;
-	} else if (p->thread != p->pagecache && p->thread == p->buffer) {
-		return DL;
-	} else {
-		return DD;
-	}
-}
-
-char *operation_to_string(const enum Operation operation) {
-	switch (operation) {
-	case Read:
-		return "read";
-	case Write:
-		return "write";
-	}
-	return NULL;
-}
-
-void print_placement(const struct Placement *placement) {
-	const struct Placement *p = placement;
-	printf("(%d,%d,%d)\n", p->thread, p->pagecache, p->buffer);
-}
-
-void print_recap(const struct Config *config) {
-	printf("pid is:              %d\n", getpid());
-	printf("operation is:        %s %s\n",
-	       config->random_operation ? "random" : "sequential",
-	       operation_to_string(config->operation));
-	printf("file:                %s\n", config->file_name);
-	printf("page  migration:     %s\n",
-	       config->pages_migration ? "allowed" : "not allowed");
-	printf("thread migration:    %s\n",
-	       config->thread_migration ? "allowed" : "not allowed");
-	printf("starting in layout:  %s\n",
-	       layout_to_string(placement_to_layout(&config->placement)));
-	printf("placement is:        ");
-	print_placement(&config->placement);
-}
-
 /* write all the dirty pages from the pagecache */
-static void sync_caches() {
+static void sync_caches()
+{
 	int pid, status;
 
 	pid = fork();
@@ -190,7 +119,8 @@ static void sync_caches() {
 	wait(&status);
 }
 
-void drop_caches() {
+void drop_caches()
+{
 	int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
 	if (write(fd, "1", 1) <= 0) {
 		perror("write");
@@ -201,7 +131,8 @@ void drop_caches() {
 	close(fd);
 }
 
-void setaffinity_node(unsigned int node) {
+void setaffinity_node(unsigned int node)
+{
 	struct bitmask *bmp = numa_allocate_nodemask();
 	numa_bitmask_setbit(bmp, node);
 	if (numa_run_on_node_mask(bmp) < 0) {
@@ -211,18 +142,21 @@ void setaffinity_node(unsigned int node) {
 	numa_free_nodemask(bmp);
 }
 
-void setaffinity_any() {
+void setaffinity_any()
+{
 	if (numa_run_on_node(-1) < 0) {
 		perror("numa_run_on_node");
 		exit(1);
 	}
 }
 
-unsigned int get_num_nodes() {
+unsigned int get_num_nodes()
+{
 	return numa_num_configured_nodes();
 }
 
-int regenerate_pagecache(const struct Config *config) {
+int regenerate_pagecache(const struct Config *config)
+{
 	sync_caches();
 	drop_caches();
 
@@ -248,24 +182,26 @@ int regenerate_pagecache(const struct Config *config) {
 	return 0;
 }
 
-size_t min(size_t a, size_t b) {
+size_t min(size_t a, size_t b)
+{
 	if (a < b)
 		return a;
 	return b;
 }
 
-size_t min3(size_t a, size_t b, size_t c) {
+size_t min3(size_t a, size_t b, size_t c)
+{
 	return min(min(a, b), c);
 }
 
-inline double diff_timespec_us(const struct timespec *time1,
-                               const struct timespec *time0) {
+inline double diff_timespec_us(const struct timespec *time1, const struct timespec *time0)
+{
 	return (double)(time1->tv_sec - time0->tv_sec) * 1e6 +
 	       (double)(time1->tv_nsec - time0->tv_nsec) / 1e3;
 }
 
-double file_operation(const char *file_name, struct Buf *buffer,
-                      enum Operation op, const bool random_op, int fd) {
+double file_operation(const char *file_name, struct Buf *buffer, enum Operation op, const bool random_op, int fd)
+{
 	size_t readChunkSize = (unsigned long)READSIZE;
 	size_t filesize = file_size(file_name);
 
@@ -314,18 +250,8 @@ double file_operation(const char *file_name, struct Buf *buffer,
 	return 0;
 }
 
-// double read_file(const char *file_name, struct Buf *buffer,
-//                  const bool random_op) {
-// 	return file_operation(file_name, buffer, Read, random_op);
-// }
-
-// double write_file(const char *file_name, struct Buf *buffer,
-//                   const bool random_op) {
-// 	return file_operation(file_name, buffer, Write, random_op);
-// }
-
-void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node) {
-
+void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node)
+{
 	for (char *addr = ptr; addr < ptr + len; addr += PAGE_SIZE) {
 		int node = 0;
 
@@ -340,7 +266,8 @@ void buffer_node_pages(char *ptr, size_t len, unsigned int *pages_per_node) {
 	}
 }
 
-unsigned int buffer_node_maxpage(char *ptr, size_t len) {
+unsigned int buffer_node_maxpage(char *ptr, size_t len)
+{
 	const unsigned int num_nodes = (int)get_num_nodes();
 	unsigned int nodes[ARRAY_SIZE] = {0};
 	buffer_node_pages(ptr, len, nodes);
@@ -356,8 +283,8 @@ unsigned int buffer_node_maxpage(char *ptr, size_t len) {
 	return maxnid;
 }
 
-void compute_results(int i, double time, struct Buf *buffer,
-                     struct Results *results) {
+void compute_results(int i, double time, struct Buf *buffer, struct Results *results)
+{
 	unsigned int thread_node;
 	unsigned int buffer_node = buffer_node_maxpage(buffer->data, buffer->size);
 	long status;
@@ -378,8 +305,8 @@ void compute_results(int i, double time, struct Buf *buffer,
 		perror("fprintf");
 }
 
-void do_benchmark(const struct Config *config) {
-
+void do_benchmark(const struct Config *config)
+{
 	setaffinity_node(config->placement.thread);
 	regenerate_pagecache(config);
 	setaffinity_node(config->placement.thread);
@@ -387,22 +314,9 @@ void do_benchmark(const struct Config *config) {
 	                                    file_size(config->file_name));
 	setaffinity_node(config->placement.thread);
 
-	if (!config->pages_migration) {
-		unsigned long nodemask = 1ul << config->placement.buffer;
-		if (mbind(ALIGN_TO_PAGE(buffer->data), buffer->size, MPOL_BIND,
-		          &nodemask, sizeof(unsigned long) * 8,
-		          MPOL_MF_MOVE | MPOL_MF_STRICT) < 0) {
-			perror("mbind");
-			exit(1);
-		}
-	}
-
 	if (config->thread_migration) {
 		setaffinity_any();
 	}
-
-	struct timespec a, b;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
 
 	int fd = open(config->file_name, O_RDWR);
 	if (fd < 0) {
@@ -410,29 +324,20 @@ void do_benchmark(const struct Config *config) {
 		exit(1);
 	}
 
+	struct timespec a, b;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
 	for (int i = 0; i < config->iteration_nr; i++) {
-		file_operation(config->file_name, buffer, config->operation,
-		               config->random_operation, fd);
-		/* compute_results(i, time, buffer, results); */
-		if (config->verbose) {
-			struct timespec a;
-			if (clock_gettime(CLOCK_MONOTONIC_RAW, &a) < 0) {
-				perror("clock a");
-			}
-			printf("%lu %d\n",
-			       (unsigned long)((double)a.tv_sec * 1e9 + (double)a.tv_nsec),
-			       i);
-		}
+		file_operation(config->file_name, buffer, config->operation, config->random_operation, fd);
 	}
 	clock_gettime(CLOCK_MONOTONIC_RAW, &b);
-	printf("%f\n", (double)(b.tv_sec - a.tv_sec) * 1e3 +
-	                                (double)(b.tv_nsec - a.tv_nsec) * 1e-6);
+	printf("%f\n", (double)(b.tv_sec - a.tv_sec) * 1e3 + (double)(b.tv_nsec - a.tv_nsec) * 1e-6);
 
 	close(fd);
 	free_buffer(buffer);
 }
 
-static void parse_args(int argc, char *argv[], struct Config *config) {
+static void parse_args(int argc, char *argv[], struct Config *config)
+{
 	int c;
 	bool sequential_set = false;
 	bool random_set = false;
@@ -466,7 +371,6 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 			} else {
 				fprintf(stderr, "error: --allow-migration %s not recognized\n",
 				        optarg);
-				print_help();
 				exit(1);
 			}
 			break;
@@ -499,7 +403,6 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 			else {
 				if (!fprintf(stderr, "operation %s is not supported\n", optarg))
 					perror("fprintf");
-				print_help();
 				exit(1);
 			}
 			break;
@@ -509,20 +412,17 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 		case 'v':
 			config->verbose = true;
 			break;
-		case 'h':
-			print_help();
-			exit(0);
+		case 'n':
+			config->num_patch = atoi(optarg);
 		case '?':
 			break;
 		default:
-			if (!fprintf(stderr, "?? getopt returned character code 0%o ??\n",
-			             c))
+			if (!fprintf(stderr, "?? getopt returned character code 0%o ??\n", c))
 				perror("fprintf");
 		}
 	}
 
 	if (random_set && sequential_set) {
-		print_help();
 		if (!fprintf(stderr,
 		             "--sequential and --random are mutually exclusive\n"))
 			perror("fprintf");
@@ -530,7 +430,8 @@ static void parse_args(int argc, char *argv[], struct Config *config) {
 	}
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	/* default config */
 	struct Config config = {
 		.placement =
@@ -546,6 +447,7 @@ int main(int argc, char *argv[]) {
 		.thread_migration = false,
 		.random_operation = true,
 		.verbose = false,
+		.num_patch = 0
 	};
 
 	/* parse the command arguments */
@@ -559,13 +461,12 @@ int main(int argc, char *argv[]) {
 			perror("fprintf");
 		exit(1);
 	}
-	// print_recap(&config);
-
 	/* random seed for random operations */
 	if (config.random_operation)
 		seed_random();
 
-	insert_pid_ioctl(getpid());
+	if (config.num_patch == 1 || config.num_patch == 2)
+		insert_pid_ioctl(getpid());
 
 	/* run the benchmark */
 	do_benchmark(&config);

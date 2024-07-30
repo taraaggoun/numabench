@@ -138,7 +138,7 @@ def main():
     plot_bar_4_with_std(write_ll_2, write_dl_2, write_ld_2, write_dd_2, "2", "write")
 
     # Exec
-    # Try
+    # Force
     read_ll_3 = get_dict("media/data/numabench/read_LL_3")
     read_dl_3 = get_dict("media/data/numabench/read_DL_3")
     plot_bar_2_with_std(read_ll_3, read_dl_3, "3", "read")
@@ -147,7 +147,7 @@ def main():
     write_dl_3 = get_dict("media/data/numabench/write_DL_3")
     plot_bar_2_with_std(write_ll_3, write_dl_3, "3", "write")
     
-    # Force
+    # Try
     read_ll_4 = get_dict("media/data/numabench/read_LL_4")
     read_dl_4 = get_dict("media/data/numabench/read_DL_4")
     plot_bar_2_with_std(read_ll_4, read_dl_4, "4", "read")
@@ -156,32 +156,18 @@ def main():
     write_dl_4 = get_dict("media/data/numabench/write_DL_4")
     plot_bar_2_with_std(write_ll_4, write_dl_4, "4", "write")
 
-    # V2
-    # Force
-    read_ll_5 = get_dict("media/data/numabench/read_LL_5")
-    read_dl_5 = get_dict("media/data/numabench/read_DL_5")
-    plot_bar_2_with_std(read_ll_5, read_dl_5, "5", "read")
-    # plot_bar_4_with_std(read_ll_4, read_dl_4, read_ll_5, read_dl_5, "7", "read")
-
-    
-    # Try
-    read_ll_6 = get_dict("media/data/numabench/read_LL_6")
-    read_dl_6 = get_dict("media/data/numabench/read_DL_6")
-    plot_bar_2_with_std(read_ll_6, read_dl_6, "6", "read")
-    # plot_bar_4_with_std(read_ll_3, read_dl_3, read_ll_6, read_dl_6, "8", "read")
-
     values  = [read_ll_0, read_dl_0, read_ld_0, read_dd_0]
     values += [read_ll_1, read_dl_1, read_ld_1, read_dd_1]
     values += [read_ll_2, read_dl_2, read_ld_2, read_dd_2]
-    values += [read_ll_5, read_dl_5, [0], [0]]
-    values += [read_ll_6, read_dl_6, [0], [0]]
+    values += [read_ll_3, read_dl_3, [0], [0]]
+    values += [read_ll_4, read_dl_4, [0], [0]]
     plot_bar_20_with_std(values, "read")
 
     values  = [write_ll_0, write_dl_0, write_ld_0, write_dd_0]
     values += [write_ll_1, write_dl_1, write_ld_1, write_dd_1]
     values += [write_ll_2, write_dl_2, write_ld_2, write_dd_2]
-    values += [write_ll_4, write_dl_4, [0], [0]]
     values += [write_ll_3, write_dl_3, [0], [0]]
+    values += [write_ll_4, write_dl_4, [0], [0]]
     plot_bar_20_with_std(values, "write")
 
 if __name__ == "__main__":

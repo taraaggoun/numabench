@@ -78,5 +78,5 @@ int main()
 		acc += read_buffer->data[0];
 
 	close(fd);
-	munmap(read_buffer, sizeof(struct Buf) + buffer->size);
+	munmap(read_buffer, sizeof(char) * (unsigned long) READSIZE + sizeof(struct Buf));
 }

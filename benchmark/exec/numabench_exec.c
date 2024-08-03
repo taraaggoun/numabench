@@ -108,7 +108,7 @@ double file_operation(const char *file_name, struct Buf *buffer, enum Operation 
 void do_benchmark(const struct Config *config)
 {
 	struct Buf *buffer = (struct Buf *)mmap(NULL, file_size(config->file_name) + sizeof(struct Buf), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-	buffer->size = file_size(config->file_name) + sizeof(struct Buf);
+	buffer->size = file_size(config->file_name);
 
 	if (config->thread_migration)
 		setaffinity_any();

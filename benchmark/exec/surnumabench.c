@@ -55,7 +55,7 @@ int main()
 		set_cpu_affinity(0);
 		setaffinity_any();
 		execute_command("./regenerate_pagecache");
-		execute_command("./numabench -o read -m thread -i 1000 -t 0 -p 0 -f testfile >> media/read_LL");
+		execute_command("./numabench -o read -m thread -i 100 -t 0 -p 0 -f testfile >> media/read_LL");
 
 		// Distant
 		set_cpu_affinity(1);

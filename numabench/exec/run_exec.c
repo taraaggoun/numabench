@@ -49,6 +49,32 @@ static void drop_caches() {
 	close(fd);
 }
 
+// Exécute une commande shell
+void execute_command(const char *command)
+{
+	int ret = system(command);
+	if (ret != 0)
+		perror("system");
+}
+
+/**
+ * If c equal 0 disable numa balencing
+ * If c equal 1 enable numa balencing
+ */
+static void write_numa_balencing(char c)
+{
+	int fd = open("/proc/sys/kernel/numa_balancing", O_WRONLY);
+	if (fd == -1) {
+		perror("open numa balencing");
+		exit(1);
+	}
+	if (write(fd, &c, 1) < 0) {
+		perror("write in numa balencing");
+		exit(1);
+	}
+	close(fd);
+}
+
 // Défini l'affinité de la CPU sur un nœud spécifique
 void set_cpu_affinity(int node)
 {
@@ -132,59 +158,66 @@ int regenerate_pagecache(int placement_pc, char *file_name)
 		free_buffer(read_buffer);
 		exit(0);
 	}
+	wait(NULL);
 	return 0;
 }
 
-// Exécute une commande shell
-void execute_command(const char *command)
+int main(int argc, char *argv[])
 {
-	int ret = system(command);
-	if (ret != 0)
-		perror("system");
-}
+	if (argc != 2) {
+		printf("Error : Invalid number of argument, patch number require\n");
+		exit(1);
+	}
+	int patch = atoi(argv[1]);
+	if (patch != 4 && patch != 5) {
+		printf("Error : this script can be use only for patch 4 and 5\n");
+		exit(1);
+	}
+	if (patch == 4)
+		write_numa_balencing('0');
+	if (patch == 5)
+		write_numa_balencing('1');
 
-int main(void)
-{
 	for (int i = 0; i < 10; i++) {
 		regenerate_pagecache(0, "testfile");
 		set_cpu_affinity(0);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_LL_4");
+		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_LL");
 
 		regenerate_pagecache(1, "testfile");
 		set_cpu_affinity(0);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_DL_4");
+		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_DL");
 
 		regenerate_pagecache(1, "testfile");
 		set_cpu_affinity(1);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_LL_4");
+		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_LL");
 
 		regenerate_pagecache(0, "testfile");
 		set_cpu_affinity(1);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_DL_4");
+		execute_command("sudo ./numabench_exec -o read -i 50 -r -f testfile >> ../media/data/read_DL");
 
 		regenerate_pagecache(0, "testfile");
 		set_cpu_affinity(0);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_LL_4");
+		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_LL");
 
 		regenerate_pagecache(1, "testfile");
 		set_cpu_affinity(0);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_DL_4");
+		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_DL");
 
 		regenerate_pagecache(1, "testfile");
 		set_cpu_affinity(1);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_LL_4");
+		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_LL");
 
 		regenerate_pagecache(0, "testfile");
 		set_cpu_affinity(1);
 		setaffinity_any();
-		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_DL_4");
+		execute_command("sudo ./numabench_exec -o write -i 50 -r -f testfile >> ../media/data/write_DL");
 	}
 	return 0;
 }

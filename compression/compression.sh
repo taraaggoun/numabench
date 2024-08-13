@@ -1,5 +1,13 @@
 #!/bin/bash
 
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "Ce script doit être exécuté en tant que root." >&2
+        exit 1
+    fi
+}
+check_root
+
 check_and_install_package() {
     PKG_NAME=$1
     if ! dpkg -s $PKG_NAME >/dev/null 2>&1; then
@@ -48,7 +56,7 @@ fi
 ./compression
 
 echo "Cleaning up..."
-rm -rf "compression/linux-${KERNEL_VERSION}* compression/compression"
+rm -rf "compression/linux* compression/compression"
 cd ..
 
 echo "Done."

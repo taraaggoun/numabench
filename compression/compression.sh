@@ -53,7 +53,7 @@ else
     exit 1
 fi
 
-./compression
+./run_compression 0
 
 echo "Cleaning up..."
 rm -rf "compression/linux* compression/compression"

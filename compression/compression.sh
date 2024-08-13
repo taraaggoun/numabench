@@ -1,0 +1,54 @@
+#!/bin/bash
+
+check_and_install_package() {
+    PKG_NAME=$1
+    if ! dpkg -s $PKG_NAME >/dev/null 2>&1; then
+        echo "Package $PKG_NAME is not installed. Installing..."
+        sudo apt-get install -y $PKG_NAME
+    else
+        echo "Package $PKG_NAME is already installed."
+    fi
+}
+
+LIBRARIES=("libnuma-dev" "gcc" "make" "wget")
+
+for lib in "${LIBRARIES[@]}"; do
+    check_and_install_package "$lib"
+done
+
+cd compression
+
+KERNEL_ARCHIVE="linux-6.6.21.tar.xz"
+KERNEL_URL="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.21.tar.xz"
+
+if [ ! -f $KERNEL_ARCHIVE ]; then
+    echo "Downloading Linux kernel version..."
+    wget $KERNEL_URL
+else
+    echo "Linux kernel archive ${KERNEL_ARCHIVE} already downloaded."
+fi
+
+if [ ! -d "${KERNEL_ARCHIVE}" ]; then
+    echo "Decompressing Linux kernel archive..."
+    tar -xvf $KERNEL_ARCHIVE
+else
+    echo "Linux kernel already decompressed."
+fi
+
+echo "Compiling the C code..."
+gcc -o compression compression.c -lnuma
+
+if [ $? -eq 0 ]; then
+    echo "Compilation successful. Executing the program..."
+else
+    echo "Compilation failed."
+    exit 1
+fi
+
+./compression
+
+echo "Cleaning up..."
+rm -rf "compression/linux-${KERNEL_VERSION}* compression/compression"
+cd ..
+
+echo "Done."

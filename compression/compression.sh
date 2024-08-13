@@ -45,6 +45,8 @@ fi
 
 echo "Compiling the C code..."
 gcc -o compression compression.c -lnuma
+gcc -o run_compression run_compression.c -lnuma
+
 
 if [ $? -eq 0 ]; then
     echo "Compilation successful. Executing the program..."

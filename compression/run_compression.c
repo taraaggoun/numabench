@@ -1,3 +1,4 @@
+#include <numa.h>
 #include <time.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -10,6 +11,8 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+#define BUFFER_SIZE 4096
+char dir_path[] = "linux-6.6.21";
 int node_file = 0;
 int node_exec = 1;
 
@@ -151,23 +154,13 @@ int main(int argc, char *argv[])
 	}
 	for (int i = 0; i < 10; i++) {
 		regenerate_pagecache(0);
-		set_cpu_affinity(0);
+		setaffinity_node(0);
 		setaffinity_any();
-		execute_command("sudo ./compression >> media/data/local_0");
+		execute_command("sudo ./compression >> media/data/local");
 
 		regenerate_pagecache(1);
-		set_cpu_affinity(0);
+		setaffinity_node(0);
 		setaffinity_any();
-		execute_command("sudo ./compression >> media/data/remote_0");
-
-		regenerate_pagecache(1);
-		set_cpu_affinity(1);
-		setaffinity_any();
-		execute_command("sudo ./compression >> media/data/local_1");
-
-		regenerate_pagecache(0);
-		set_cpu_affinity(1);
-		setaffinity_any();
-		execute_command("sudo ./compression >> media/data/remote_1");
+		execute_command("sudo ./compression >> media/data/remote");
 	}
 }

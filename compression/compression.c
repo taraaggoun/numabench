@@ -10,7 +10,6 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
-#define BUFFER_SIZE 4096
 char dir_path[] = "linux-6.6.21";
 
 /**

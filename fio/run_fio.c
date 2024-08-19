@@ -15,8 +15,8 @@
 #define FILE_SIZE "7G"
 #define ITERATIONS 10
 #define TEST_FILE "./media/testfile"
-#define LOCAL_RESULTS "./media/local_results"
-#define REMOTE_RESULTS "./media/remote_results"
+#define LOCAL_RESULTS "./media/local"
+#define REMOTE_RESULTS "./media/remote"
 int num_config = 0;
 
 /**
@@ -131,7 +131,7 @@ void setaffinity_any()
 void run_fio(const char *result_file)
 {
 	char cmd[512];
-	snprintf(cmd, sizeof(cmd), "fio --name=read_test --filename=%s_%d --size=%s --bs=2M --rw=read --ioengine=sync --runtime=60 --time_based --numjobs=1 --group_reporting >> %s", TEST_FILE, num_config, FILE_SIZE, result_file);
+	snprintf(cmd, sizeof(cmd), "fio --name=read_test --filename=%s --size=%s --bs=2M --rw=read --ioengine=sync --runtime=60 --time_based --numjobs=1 --group_reporting >> %s_%d ", TEST_FILE, FILE_SIZE, result_file, num_config);
 	system(cmd);
 }
 

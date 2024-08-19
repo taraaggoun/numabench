@@ -46,7 +46,7 @@ void create_test_file()
 	if (mkdir("media", 0755) == -1) {
 		if (errno != EEXIST) {
 			perror("Erreur lors de la création du répertoire");
-			return -1;
+			exit(1);
 		}
 	}
 
@@ -169,13 +169,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc == 2)
-		num_config = argv[1];
+		num_config = atoi(argv[1]);
 	int num_nodes = numa_max_node() + 1;
 
 	if (num_config == 3)
-		set_numa_balancing("1");
+		set_numa_balancing('1');
 	else
-		set_numa_balancing("0");
+		set_numa_balancing('0');
 
 	create_test_file();
 

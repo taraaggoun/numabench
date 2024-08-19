@@ -26,12 +26,12 @@ def plot_bar_2_with_std(values1, values2, configuration):
     ax.set_xticks(x)
     ax.set_xticklabels(['Locale', 'Distant'])
     ax.legend()
-    plt.savefig("numabench/media/graph/compression_" + configuration + ".png") # Sauvegarder le graphique dans un fichier
+    plt.savefig("compression/media/graph/compression_" + configuration + ".png") # Sauvegarder le graphique dans un fichier
     plt.close()
 
 def main():
-    local_0 = get_dict("compression/media/data/local_0")
-    remote_0 = get_dict("compression/media/data/remote_0")
+    local_0 = get_dict("compression/media/data/local")
+    remote_0 = get_dict("compression/media/data/remote")
     plot_bar_2_with_std(local_0, remote_0, "0")
 
 if __name__ == "__main__":

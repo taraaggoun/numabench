@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
-char dir_path[] = "linux-6.6.21";
+char file_path[] = "testfile";
 
 /**
  * Return time1 - time0
@@ -30,7 +30,7 @@ void tar_directory(void) {
 		perror("fork");
 		exit(EXIT_FAILURE);
 	} else if (pid == 0) { // Child
-		execlp("tar", "tar", "-cf", "archive.tar", dir_path, NULL);
+		execlp("tar", "tar", "-cf", "archive.tar", file_path, NULL);
 		perror("execlp");
 		exit(EXIT_FAILURE);
 	}

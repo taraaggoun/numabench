@@ -26,22 +26,24 @@ done
 
 cd compression
 
-KERNEL_ARCHIVE="linux-6.6.21.tar.xz"
-KERNEL_URL="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.21.tar.xz"
+# KERNEL_ARCHIVE="linux-6.6.21.tar.xz"
+# KERNEL_URL="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.21.tar.xz"
 
-if [ ! -f $KERNEL_ARCHIVE ]; then
-    echo "Downloading Linux kernel version..."
-    wget $KERNEL_URL
-else
-    echo "Linux kernel archive ${KERNEL_ARCHIVE} already downloaded."
-fi
+# if [ ! -f $KERNEL_ARCHIVE ]; then
+#     echo "Downloading Linux kernel version..."
+#     wget $KERNEL_URL
+# else
+#     echo "Linux kernel archive ${KERNEL_ARCHIVE} already downloaded."
+# fi
 
-if [ ! -d "${KERNEL_ARCHIVE}" ]; then
-    echo "Decompressing Linux kernel archive..."
-    tar -xvf $KERNEL_ARCHIVE
-else
-    echo "Linux kernel already decompressed."
-fi
+# if [ ! -d "${KERNEL_ARCHIVE}" ]; then
+#     echo "Decompressing Linux kernel archive..."
+#     tar -xvf $KERNEL_ARCHIVE
+# else
+#     echo "Linux kernel already decompressed."
+# fi
+
+dd if=/dev/zero of=testfile bs=1M count=5120
 
 echo "Compiling the C code..."
 gcc -o compression compression.c -lnuma

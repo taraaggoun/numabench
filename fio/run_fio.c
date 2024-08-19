@@ -14,10 +14,14 @@
 
 #define FILE_SIZE "7G"
 #define ITERATIONS 10
-#define TEST_FILE "/tmp/testfile"
-#define LOCAL_RESULTS "local_results"
-#define REMOTE_RESULTS "remote_results"
+#define TEST_FILE "./media/testfile"
+#define LOCAL_RESULTS "./media/local_results"
+#define REMOTE_RESULTS "./media/remote_results"
+int num_config = 0;
 
+/**
+ * Synchronise and empty caches
+ */
 void clear_cache()
 {
 	sync();
@@ -34,8 +38,18 @@ void clear_cache()
 	close(fd);
 }
 
+/**
+ * Create media directory and Create the file that will be read
+ */
 void create_test_file()
 {
+	if (mkdir("media", 0755) == -1) {
+		if (errno != EEXIST) {
+			perror("Erreur lors de la création du répertoire");
+			return -1;
+		}
+	}
+
 	if (access(TEST_FILE, F_OK) != 0) {
 		printf("Creating test file %s...\n", TEST_FILE);
 		char cmd[512];
@@ -44,6 +58,38 @@ void create_test_file()
 	}
 }
 
+/**
+ * Enable or disable the numabalancing
+ */
+void set_numa_balancing(char state)
+{
+	const char *numa_balancing_path = "/proc/sys/kernel/numa_balancing";
+
+	int fd = open(numa_balancing_path, O_WRONLY);
+	if (fd == -1) {
+		perror("Erreur lors de l'ouverture du fichier /proc/sys/kernel/numa_balancing");
+		exit(1);
+	}
+
+	if (state != '0' && state != '1') {
+		fprintf(stderr, "État invalide : %c. Utilisez '0' pour désactiver et '1' pour activer.\n", state);
+		close(fd);
+		exit(1);
+	}
+	
+	if (write(fd, &state, 1) == -1) {
+		perror("Erreur lors de l'écriture dans /proc/sys/kernel/numa_balancing");
+		close(fd);
+		exit(1);
+	}
+
+	close(fd);
+	printf("NUMA balancing %s.\n", state == '1' ? "enable" : "disable");
+}
+
+/**
+ * Set the processus on the node node
+ */
 void set_cpu_affinity_by_node(int node)
 {
 	struct bitmask *cpus = numa_allocate_cpumask();
@@ -68,7 +114,9 @@ void set_cpu_affinity_by_node(int node)
 	numa_free_cpumask(cpus);
 }
 
-// Change le mask pour tout les coeurs
+/**
+ * The proceessus can be executed on every node
+ */
 void setaffinity_any()
 {
 	if (numa_run_on_node(-1) < 0) {
@@ -77,13 +125,19 @@ void setaffinity_any()
 	}
 }
 
+/**
+ * Run the commandline to execute fio
+ */
 void run_fio(const char *result_file)
 {
 	char cmd[512];
-	snprintf(cmd, sizeof(cmd), "fio --name=read_test --filename=%s --size=%s --bs=2M --rw=read --ioengine=sync --runtime=60 --time_based --numjobs=1 --group_reporting >> %s", TEST_FILE, FILE_SIZE, result_file);
+	snprintf(cmd, sizeof(cmd), "fio --name=read_test --filename=%s_%d --size=%s --bs=2M --rw=read --ioengine=sync --runtime=60 --time_based --numjobs=1 --group_reporting >> %s", TEST_FILE, num_config, FILE_SIZE, result_file);
 	system(cmd);
 }
 
+/**
+ * Read the file to load it in memory
+ */
 void read_file()
 {
 	int fd = open(TEST_FILE, O_RDONLY);
@@ -97,13 +151,31 @@ void read_file()
 	close(fd);
 }
 
-int main() {
+int main(int argc, char *argv[])
+{
+	if (geteuid() != 0) {
+		fprintf(stderr, "This program should be executed in root mode\n");
+		exit(1);
+	}
+
 	if (numa_available() == -1) {
 		fprintf(stderr, "NUMA is not available on this system.\n");
 		exit(1);
 	}
 
+	if (argc > 2) {
+		fprintf(stderr, "Error : too many argument\n");
+		exit(1);
+	}
+
+	if (argc == 2)
+		num_config = argv[1];
 	int num_nodes = numa_max_node() + 1;
+
+	if (num_config == 3)
+		set_numa_balancing("1");
+	else
+		set_numa_balancing("0");
 
 	create_test_file();
 
@@ -113,7 +185,8 @@ int main() {
 		clear_cache();
 		set_cpu_affinity_by_node(0);
 		read_file();
-		// setaffinity_any();
+		if (num_config != 0)
+			setaffinity_any();
 		run_fio(LOCAL_RESULTS);
 
 		// Test with the file loaded on node 0 but reading from node 1
@@ -121,9 +194,10 @@ int main() {
 		set_cpu_affinity_by_node(0);
 		read_file();
 		set_cpu_affinity_by_node(1);
-		// setaffinity_any();
+		if (num_config != 0)
+			setaffinity_any();
 		run_fio(REMOTE_RESULTS);
 	}
-	printf("Tests completed. Results are stored in respective files.\n");
+	printf("Tests completed\n");
 	return 0;
 }

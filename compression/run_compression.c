@@ -12,7 +12,7 @@
 #include <sys/types.h>
 
 #define BUFFER_SIZE 4096
-char dir_path[] = "linux-6.6.21";
+char file_path[] = "testfile";
 int node_file = 0;
 int node_exec = 1;
 
@@ -89,32 +89,46 @@ static void setaffinity_any()
 	}
 }
 
+// static void load_memory(void)
+// {
+// 	DIR *dir;
+// 	struct dirent *entry;
+// 	char filepath[BUFFER_SIZE];
+// 	char buffer[BUFFER_SIZE];
+// 	ssize_t bytes_read;
+
+// 	if ((dir = opendir(dir_path)) == NULL) {
+// 		perror("opendir");
+// 		return;
+// 	}
+// 	while ((entry = readdir(dir)) != NULL) {
+// 		if (entry->d_type == DT_REG) {  // Si c'est un fichier régulier
+// 			snprintf(filepath, sizeof(filepath), "%s/%s", dir_path, entry->d_name);
+// 			int fd = open(filepath, O_RDONLY);
+// 			if (fd == -1) {
+// 				perror("open");
+// 				continue;
+// 			}
+// 			while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0) {
+// 			}
+// 			close(fd);
+// 		}
+// 	}
+// 	closedir(dir);
+// }
+
 static void load_memory(void)
 {
-	DIR *dir;
-	struct dirent *entry;
-	char filepath[BUFFER_SIZE];
-	char buffer[BUFFER_SIZE];
-	ssize_t bytes_read;
-
-	if ((dir = opendir(dir_path)) == NULL) {
-		perror("opendir");
-		return;
+	int fd = open(file_path, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		exit(1);
 	}
-	while ((entry = readdir(dir)) != NULL) {
-		if (entry->d_type == DT_REG) {  // Si c'est un fichier régulier
-			snprintf(filepath, sizeof(filepath), "%s/%s", dir_path, entry->d_name);
-			int fd = open(filepath, O_RDONLY);
-			if (fd == -1) {
-				perror("open");
-				continue;
-			}
-			while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0) {
-			}
-			close(fd);
-		}
+	int bytes_read;
+	char buffer[4096];
+	while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0) {
 	}
-	closedir(dir);
+	close(fd);
 }
 
 void regenerate_pagecache(int node_pg)

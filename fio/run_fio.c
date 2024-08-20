@@ -19,6 +19,27 @@
 #define REMOTE_RESULTS "./media/remote"
 int num_config = 0;
 
+#include <sys/ioctl.h>
+#define IOCTL_MAGIC 'N'
+#define PIDW _IOW(IOCTL_MAGIC, 0, char *)
+
+/**
+ * Insert the pid in the kernel array with ioctl
+ */
+static void insert_pid_ioctl(pid_t pid)
+{
+	int fd = open("/dev/openctl", O_WRONLY);
+	if (fd == -1)
+		perror("open openctl");
+
+	char buf[10] = { 0 };
+	snprintf(buf, 10, "%d", pid);
+	if (ioctl(fd, PIDW, buf) == -1)
+		perror("ioctl");
+
+	close(fd);
+}
+
 /**
  * Synchronise and empty caches
  */
@@ -172,10 +193,13 @@ int main(int argc, char *argv[])
 		num_config = atoi(argv[1]);
 	int num_nodes = numa_max_node() + 1;
 
-	if (num_config == 3)
+	if (num_config == 3 || num_config == 5)
 		set_numa_balancing('1');
 	else
 		set_numa_balancing('0');
+
+	if (num_config == 2 || num_config == 3)
+		insert_pid_ioctl(getpid());
 
 	create_test_file();
 

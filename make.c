@@ -11,8 +11,8 @@
 #include <errno.h>
 #include <numa.h>
 #include <numaif.h>
+#include <time.h>
 
-#define FILE_SIZE "7G"
 #define ITERATIONS 10
 #define TEST_FILE "./media/testfile"
 #define LOCAL_RESULTS "./media/local"
@@ -147,14 +147,50 @@ void setaffinity_any()
 }
 
 /**
+ * Return time1 - time0
+ */
+inline static double diff_timespec_us(const struct timespec *time1, 
+					const struct timespec *time0)
+{
+	return 	(double)(time1->tv_sec - time0->tv_sec) * 1e3 +
+		(double)(time1->tv_nsec - time0->tv_nsec) * 1e-6;
+}
+
+/**
  * Run the commandline to execute fio
  */
-void run_fio(const char *result_file)
+void run_compression(const char *result_file)
 {
+	struct timespec start, end;
+
+	system("make clean -C ~/6.6.21");
 	char cmd[512];
-	snprintf(cmd, sizeof(cmd), "fio --name=read_test --filename=%s --size=%s --bs=2M --rw=read --ioengine=sync --runtime=60 --time_based --numjobs=1 --group_reporting >> %s_%d ", TEST_FILE, FILE_SIZE, result_file, num_config);
+	snprintf(cmd, sizeof(cmd), "make -C ~/linux/6.6.21", TEST_FILE);
+
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 	system(cmd);
+	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+
+	double elapsed_time = diff_timespec_us(&end, &start);
+
+	int fd = open(result_file, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd == -1) {
+		perror("Failed to open result file");
+		exit(1);
+	}
+
+	char buffer[128];
+	int len = snprintf(buffer, sizeof(buffer), "%f\n", elapsed_time);
+
+	if (write(fd, buffer, len) == -1) {
+		perror("Failed to write to result file");
+		close(fd);
+		exit(1);
+	}
+
+	close(fd);
 }
+
 
 /**
  * Read the file to load it in memory
@@ -211,7 +247,7 @@ int main(int argc, char *argv[])
 		read_file();
 		if (num_config != 0)
 			setaffinity_any();
-		run_fio(LOCAL_RESULTS);
+		run_compression(LOCAL_RESULTS);
 
 		// Test with the file loaded on node 0 but reading from node 1
 		clear_cache();
@@ -220,8 +256,9 @@ int main(int argc, char *argv[])
 		set_cpu_affinity_by_node(1);
 		if (num_config != 0)
 			setaffinity_any();
-		run_fio(REMOTE_RESULTS);
+		run_compression(REMOTE_RESULTS);
 	}
+	remove("archive.tar");
 	printf("Tests completed\n");
 	return 0;
 }

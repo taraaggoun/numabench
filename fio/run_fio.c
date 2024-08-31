@@ -191,7 +191,6 @@ int main(int argc, char *argv[])
 
 	if (argc == 2)
 		num_config = atoi(argv[1]);
-	int num_nodes = numa_max_node() + 1;
 
 	if (num_config == 3 || num_config == 5)
 		set_numa_balancing('1');

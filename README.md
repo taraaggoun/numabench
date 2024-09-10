@@ -23,10 +23,10 @@ Il a été développé avec la version [6.6.21](https://cdn.kernel.org/pub/linux
 # Utilisation
 
 ## Patch
-Dans le répertoire `patch`, se trouvent 4 patchs (ainsi que leurs versions inverses) qui affectent un nœud NUMA à un processus en fonction de l'utilisation de fichiers déjà chargés en mémoire sur ce nœud.
+Dans le répertoire `patch`, se trouvent 4 patchs du noyau Linux (ainsi que leurs versions inverses) qui affectent un nœud NUMA à un processus en fonction de l'utilisation de fichiers déjà chargés en mémoire sur ce nœud.
 
 - Deux des patchs appliquent l'optimisation lors de l'ouverture du fichier (préfixe `open`), en vérifiant si le fichier est déjà chargé en mémoire. Les deux autres effectuent l'optimisation à l'exécution (préfixe `exec`), en vérifiant si les paramètres sont chargés en mémoire.
-- Deux des patchs forcent le processus à changer de nœud NUMA (suffixe `force`). Les deux autres proposent simplement un nœud a l'ordonnanceur (suffixe `try`).
+- Deux des patchs forcent le processus à changer de nœud NUMA (suffixe `force`). Les deux autres proposent simplement un nœud a l'ordonnanceur (suffixe `try`). Il décidera ou non de basculer le processus de noeud.
 
 ### Compilation et Exécution
 L'optimisation au niveau de l'ouverture de fichier est protégée par un ioctl. Voici les étapes pour l'activer :
@@ -60,26 +60,26 @@ make
 #### Numabench :
 -   Pour toutes les configuration sauf exec 
     ```bash=
-    ./numabench.sh
+    ./numabench.sh [num_config]
     ```
 
 - Pour les configuration exec
     ```bash=
     cd exec
     make
-    ./run_exec
+    ./run_exec [num_config]
     ```
 
 #### Fio :
 ```bash=
-./run_fio
+./run_fio [num_config]
 ```
 #### Grep :
 ```bash=
-./run_grep
+./run_grep [num_config]
 ```
 
-Il est possible de compiler tout les répertoire depuis la racine avec la commande `make`.
+Il est possible de compiler tout les répertoire depuis la racine avec la commande `make` ou un seul sous-répertoire avec `make [nom du sous répertoire]`.
 Les fichiers contenant les résultat sont sauvegarder dans le répertoire `[nom du test]/media`
 Pour généré les graph il suffit d'exécuté la commande `python3 graph.py`
 

@@ -107,10 +107,25 @@ Voici le résultat de la commande `lstopo` :
 | ![quetzal_read_all](numabench/media/graph/quetzal_read_all.png) | ![quetzal_write_all](numabench/media/graph/quetzal_write_all.png) |
 |------------------------|------------------------|
 
-Il n'y a pas de valeurs pour les configurations `exec` dans les catégories `LD` et `DD`, car le processus est déplacé de cœur à l'exécution, et par défaut, l'allocation de mémoire anonyme se fait localement.
+Sur ces graphes, on peut observer le temps de lecture (à gauche) et d’écriture (à droite) aléatoire dans un fichier de 3 Gio, en fonction du placement des pages et du buffer par rapport au thread pour chaque configuration.
+
+- Le **Témoin** représente le temps minimum en **LL** et maximum en **LD**.
+- La configuration **Linux** reste proche du **Témoin**, bien que parfois, un écart-type plus important soit visible. Cet écart provient du fait que le thread peut être déplacé d’un cœur à un autre par l’ordonnanceur pendant son exécution.
+
+- Pour les patchs **open**, selon la configuration :
+    - **LL** : On observe des performances proches de celles du **Témoin**.
+    - **DL** : Comme le thread a été déplacé sur le même nœud que les pages, on se retrouve dans une configuration **LD**, où les pages sont locales et le buffer est distant. Cela explique pourquoi la configuration **Open Force** atteint des performances équivalentes au **Témoin LD**. La configuration **Open Try** se situe entre le **Témoin DL** et **LD**, car le thread est proposé a l'ordonnanceur pour être déplacé, mais cela ne se fait pas systématiquement en raison de conflits avec la mémoire anonyme.
+    - **LD** : Pour **Open Force**, le thread est forcé de rester local sur le nœud où les pages sont situées, mais distant de la mémoire anonyme. Pour **Open Try**, l'ordonnanceur peut choisir de déplacer le thread pour qu’il soit local à la mémoire anonyme, ce qui explique la différence de performance entre les deux.
+    - **DD** : On revient à une configuration **LL**.
+
+- Il n'y a pas de valeurs pour les configurations **exec** dans les catégories **LD** et **DD**, car le processus est déplacé de cœur à l'exécution, et par défaut, l'allocation de mémoire anonyme se fait localement. Quand les pages sont en local, on observe des performances proches du **Témoin**, et lorsqu’elles sont distantes, un écart avec le **Témoin** apparaît, car le temps est équivalent au temps en local.
 
 ### Fio
 ![graph_all](fio/media/graph_all.png)
+
+Sur ce graphe, on peut observer la bande passante calculée par l'exécution de la commande `fio` sur un fichier de 7 Gio pour chaque configuration, lancée en local ou en distant par rapport à la localisation des pages du fichier sur les nœuds.
+
+On peut constater que seule la configuration **Exec Force** parvient à égaler le **Témoin** en local et en distant. Bien qu'une amélioration en distant soit visible pour toutes les configurations, **Exec Force** reste la plus performante.
 
 ### Grep
 ![graph_all](grep/media/graph_all.png)
@@ -120,3 +135,4 @@ Voici plusieurs perspectives pour améliorer notre approche :
 
 - Dans notre réalisation, à chaque ouverture de fichier, nous recherchons le nombre de pages chargées en mémoire sur chaque nœud pour le fichier. Une amélioration possible serait d'utiliser un compteur mis à jour chaque fois qu'une page est ajoutée ou retirée du page cache.
 - Dans l'optimisation au niveau de l'exécution, à chaque exécution d'un exécutable, nous vérifions tous les paramètres pour déterminer s'ils sont des fichiers. Une amélioration possible serait d'annoter l'exécutable afin qu'il enregistre s'il utilise des fichiers en paramètres.
+- Enfin, nous avons deux types de patchs. Le premier force un processus à rester sur un nœud, ce qui peut poser problème si plusieurs processus utilisent le même fichier, car cela pourrait saturer le nœud, tandis que d'autres resteraient sous-utilisés. Le deuxième type de patch propose à l'ordonnanceur de déplacer le processus sur un nœud spécifique, mais celui-ci n'est pas obligé de le respecter. Une amélioration possible serait d'attribuer un poids à chaque nœud NUMA de la machine. Le processus aurait ainsi plus de chances de s'exécuter sur le nœud avec le poids le plus élevé, mais si ce nœud est déjà surchargé, il s'exécuterait sur un nœud avec un poids plus faible. Ce poids serait calculé en fonction du nombre de pages du fichier chargées en mémoire sur chaque nœud.
